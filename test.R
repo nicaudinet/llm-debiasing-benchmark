@@ -1,0 +1,15 @@
+library(doParallel)
+
+ncores <- as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
+
+cl <- makeCluster(ncores)
+registerDoParallel(cl)
+
+result <- foreach(i = 1:100, .combine = c) %dopar% {
+    Sys.sleep(0.1)
+    sqrt(i)
+}
+
+write.csv(result, file = "dummy.csv")
+
+stopCluster(cl)
