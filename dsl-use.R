@@ -4,11 +4,11 @@ library(doParallel)
 library(foreach)
 library(fields)
 
-R <- 1 # number of repetitions for coverage
+R <- 100 # number of repetitions for coverage
 CL <- 0.95 # confidence level
 pred_accuracy <- 0.9 # "LLM" prediction accuracy
 num_coeffs <- 4 + 1 # 4 independent variables + intercept
-NN <- 2 # side length of the grid (2 <= NN)
+NN <- 10 # side length of the grid (2 <= NN)
 
 data_file <- "dsl_use_data.RData"
 plot_file <- "dsl_use_plot.RData"
@@ -142,7 +142,9 @@ simulate <- function() {
 
 # Setup parallel backend to use multiple processors
 print("Starting to run simulations in parallel")
-registerDoParallel(cl <- makeCluster(detectCores() - 1))
+ncores <- as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
+print(ncores)
+registerDoParallel(cl <- makeCluster(ncores))
 
 # Run the simulation in parallel
 results <- foreach(r = 1:R, .packages = c("dsl", "MASS")) %dopar% { simulate() }
