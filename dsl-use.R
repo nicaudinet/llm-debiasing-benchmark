@@ -147,7 +147,25 @@ print(ncores)
 registerDoParallel(cl <- makeCluster(ncores))
 
 # Run the simulation in parallel
-results <- foreach(r = 1:R, .packages = c("dsl", "MASS")) %dopar% { simulate() }
+results <- foreach(
+    r = 1:R,
+    .packages = c("dsl", "MASS"),
+    .errorhandling="pass"
+) %dopar% {
+    tryCatch(
+        simulate(),
+        warning = function(w) {
+            message("A warning occurred")
+            print(w)
+            return(NA)
+        },
+        error = function(e) {
+            message("An error occurred")
+            print(e)
+            return(NA)
+        }
+    )
+}
 
 # Initialise final arrays
 dim <- c(R, NN, NN, num_coeffs)
@@ -160,13 +178,14 @@ stderr_dsl <- array(rep(0, size), dim = dim)
 
 # Aggregate results back into the arrays
 for (r in 1:R) {
+    result <- results[[r]]
     for (i in 1:NN) {
-        coeffs_true[r,i, , ] <- results[[r]]$coeffs_true
+        coeffs_true[r,i, , ] <- result$coeffs_true
     }
-    coeffs_exp[r, , , ] <- results[[r]]$coeffs_exp
-    stderr_exp[r, , , ] <- results[[r]]$stderr_exp
-    coeffs_dsl[r, , , ] <- results[[r]]$coeffs_dsl
-    stderr_dsl[r, , , ] <- results[[r]]$stderr_dsl
+    coeffs_exp[r, , , ] <- result$coeffs_exp
+    stderr_exp[r, , , ] <- result$stderr_exp
+    coeffs_dsl[r, , , ] <- result$coeffs_dsl
+    stderr_dsl[r, , , ] <- result$stderr_dsl
 }
 
 # Stop parallel backend
