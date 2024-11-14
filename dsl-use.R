@@ -91,7 +91,6 @@ fit_dsl <- function(data, selected) {
     ))
 }
 
-
 # Run a single instance of the simulation
 simulate <- function() {
 
@@ -105,14 +104,15 @@ simulate <- function() {
 
     for (i in 1:NN) {
 
-        # Generate data
-        n <- num_samples[i]
-        data <- generate(n)
-
-        # Compute true coefficients
-        local_coeffs_true <- (fit(data, 1:n))$coefficient
-
         for (j in 1:i) {
+
+            # Generate data
+            n <- num_samples[i]
+            data <- generate(n)
+
+            # Compute true coefficients
+            out_true <- fit(data, 1:n)
+            local_coeffs_true <- out_true$coefficient
 
             # Select samples for expert annotation
             selected <- sample(1:n, size = num_samples[j])
@@ -181,9 +181,7 @@ stderr_dsl <- array(rep(0, size), dim = dim)
 # Aggregate results back into the arrays
 for (r in 1:result_size) {
     result <- results[[r]]
-    for (i in 1:NN) {
-        coeffs_true[r,i, , ] <- result$coeffs_true
-    }
+    coeffs_true[r, , , ] <- result$coeffs_true
     coeffs_exp[r, , , ] <- result$coeffs_exp
     stderr_exp[r, , , ] <- result$stderr_exp
     coeffs_dsl[r, , , ] <- result$coeffs_dsl
