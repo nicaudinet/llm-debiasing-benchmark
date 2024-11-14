@@ -14,6 +14,5 @@
 
 module reset
 module load R
-module load lmod
 
 apptainer exec container.sif Rscript dsl-use.R
