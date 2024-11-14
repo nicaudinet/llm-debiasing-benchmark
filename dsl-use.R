@@ -150,7 +150,8 @@ registerDoParallel(cl <- makeCluster(ncores))
 results <- foreach(
     r = 1:R,
     .packages = c("dsl", "MASS"),
-    .errorhandling="pass"
+    .inorder = FALSE, # don't need the results in order
+    .errorhandling="remove" # don't include NA results
 ) %dopar% {
     tryCatch(
         simulate(),
@@ -168,7 +169,8 @@ results <- foreach(
 }
 
 # Initialise final arrays
-dim <- c(R, NN, NN, num_coeffs)
+result_size <- length(results)
+dim <- c(result_size, NN, NN, num_coeffs)
 size <- prod(dim)
 coeffs_true <- array(rep(0, size), dim = dim)
 coeffs_exp <- array(rep(0, size), dim = dim)
@@ -177,7 +179,7 @@ coeffs_dsl <- array(rep(0, size), dim = dim)
 stderr_dsl <- array(rep(0, size), dim = dim)
 
 # Aggregate results back into the arrays
-for (r in 1:R) {
+for (r in 1:result_size) {
     result <- results[[r]]
     for (i in 1:NN) {
         coeffs_true[r,i, , ] <- result$coeffs_true
