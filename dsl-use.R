@@ -97,6 +97,7 @@ simulate <- function() {
     # Initialise arrays
     dim <- c(NN, NN, num_coeffs)
     size <- prod(dim)
+    local_coeffs_true <- array(rep(0, size), dim = dim)
     local_coeffs_exp <- array(rep(0, size), dim = dim)
     local_stderr_exp <- array(rep(0, size), dim = dim)
     local_coeffs_dsl <- array(rep(0, size), dim = dim)
@@ -112,10 +113,10 @@ simulate <- function() {
 
             # Compute true coefficients
             out_true <- fit(data, 1:n)
-            local_coeffs_true <- out_true$coefficient
+            local_coeffs_true[i, j, ] <- out_true$coefficient
 
             # Select samples for expert annotation
-            selected <- sample(1:n, size = num_samples[j])
+            selected <- sample(1:n, size = num_samples[j], replace = FALSE)
 
             # Compute coefficients from expert annotations only
             out_exp <- fit(data, selected)
