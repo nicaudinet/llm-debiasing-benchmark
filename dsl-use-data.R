@@ -1,19 +1,45 @@
+
+# Compute the data for the DSL use experiment
+# Saves the data in a file on disk (filename argument required)
+
+#############
+## Imports ##
+#############
+
 library(MASS)
 library(dsl)
 library(doParallel)
 library(foreach)
 library(fields)
 
-R <- 100 # number of repetitions for coverage
+###############
+## Arguments ##
+###############
+
+# Command line arguments
+
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) < 1) {
+    stop("No filename argument found. Please provide one in first position") 
+}
+data_file <- args[1]
+
+# Cannot change
+
 CL <- 0.95 # confidence level
-pred_accuracy <- 0.9 # "LLM" prediction accuracy
 num_coeffs <- 4 + 1 # 4 independent variables + intercept
-NN <- 10 # side length of the grid (2 <= NN)
 
-data_file <- "dsl_use_data.RData"
-plot_file <- "dsl_use_plot.RData"
+# Can change
 
-num_samples <- ceiling(10^seq(from = 2, to = 4, length.out = NN))
+pred_accuracy <- 0.9 # "LLM" prediction accuracy
+R <- 1 # number of repetitions for coverage
+NN <- 2 # side length of the grid (2 <= NN)
+# ncores <- as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
+ncores <- 4
+
+###############
+## Functions ##
+###############
 
 expit <- function(x) {
     return(exp(x) / (1 + exp(x)))
@@ -95,6 +121,7 @@ fit_dsl <- function(data, selected) {
 simulate <- function() {
 
     # Initialise arrays
+    num_samples <- ceiling(10^seq(from = 2, to = 4, length.out = NN))
     dim <- c(NN, NN, num_coeffs)
     size <- prod(dim)
     local_coeffs_true <- array(rep(0, size), dim = dim)
@@ -141,10 +168,12 @@ simulate <- function() {
 
 }
 
+##########
+## Main ##
+##########
+
 # Setup parallel backend to use multiple processors
-print("Starting to run simulations in parallel")
-ncores <- as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
-print(ncores)
+print(paste("Run simulations in parallel on ", ncores, " cores"))
 registerDoParallel(cl <- makeCluster(ncores))
 
 # Run the simulation in parallel
@@ -192,6 +221,7 @@ for (r in 1:result_size) {
 # Stop parallel backend
 stopCluster(cl)
 
+# Save results in a file
 save(
     coeffs_true,
     coeffs_exp,
@@ -200,55 +230,3 @@ save(
     stderr_dsl,
     file = data_file
 )
-
-calc_bias <- function(Y, Y_hat) {
-    error_std <- (Y - Y_hat) / Y
-    return(apply(error_std, MARGIN = c(2,3), FUN = mean))
-}
-
-bias_exp <- calc_bias(coeffs_true, coeffs_exp)
-bias_dsl <- calc_bias(coeffs_true, coeffs_dsl)
-error <- bias_exp / bias_dsl
-error <- matrix(error[nrow(error):1, ncol(error):1], NN, NN)
-error[col(error) < row(error)] <- NA
-
-# Open PDF device
-pdf(plot_file, width = 14, height = 10)
-
-# Plot image and legend
-image.plot(
-    new = FALSE,
-    z = error,
-    xlab = "Number of expert samples",
-    ylab = "Number of total samples",
-    col = colorRampPalette(c("white", "red"))(100),
-    useRaster = TRUE,
-    axes = FALSE,
-    zlim = range(error, na.rm = TRUE)
-)
-
-# Set NAs to grey
-if (any(is.na(error))) {
-    mmat <- ifelse(is.na(error), 1, NA)
-    image(
-        mmat,
-        axes = FALSE,
-        col = "grey",
-        useRaster = TRUE,
-        add = TRUE
-    )
-}
-
-title("Error")
-
-# Plot image axes
-at = c(0,0.5,1)
-labels = c(expression(10^2), expression(10^3), expression(10^4))
-axis(1, at = at, labels = labels)
-axis(2, at = at, labels = labels)
-
-# Surround image with box
-box()
-
-# Save plot to image
-dev.off()
