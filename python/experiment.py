@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 import os
+import sys
 
 @dataclass
 class Configs:
@@ -198,14 +199,20 @@ if __name__ == "__main__":
     if "SLURM_CPUS_ON_NODE" in os.environ:
         num_cores = int(os.environ["SLURM_CPUS_ON_NODE"])
     else:
-        num_cores = 10
+        num_cores = 32
+
+#    if "SLURM_ARRAY_TASK_ID" in os.environ:
+#       task_id = os.environ["SLURM_CPUS_ON_NODE"]
+#       datafile = Path(f"results/data_{task_id}.npz")
+#   else:
+#       datafile = Path("data.npz")
 
     configs = Configs(
-        side_length = 3,
+        side_length = 10,
         confidence_level = 0.95,
         prediction_accuracy = 0.9,
         num_coefficients = 5, # 4 Xs + intercept
-        datafile = Path("data.npz"),
+        datafile = Path(sys.argv[1]),
         num_cores = num_cores,
     )
 

@@ -5,3 +5,4 @@ container.sif
 python/.venv
 python/data.npz
 python/plot.pdf
+python/results

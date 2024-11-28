@@ -1,0 +1,14 @@
+Bootstrap: docker
+From: quay.io/condaforge/mambaforge:24.9.2-0
+
+%files
+    requirements.txt
+
+%post
+    /opt/conda/bin/conda install -y r-base=4.3.3
+    /opt/conda/bin/conda install -y r-devtools=2.4.5
+    /opt/conda/bin/conda install -y --file requirements.txt
+    ln -snf /usr/share/zoneinfo/Europe/Stockholm /etc/localtime && echo Europe/Stockholm > /etc/timezone
+    DEBIAN_FRONTEND=noninteractive apt update -y
+    apt install -y cmake
+    R -e "library(devtools); install_github(\"naoki-egami/dsl\", dependencies = TRUE)"
