@@ -74,7 +74,10 @@ def fit(X, Y):
     """
     Fit a logistic regression to the data and return the coefficients
     """
-    logreg = LogisticRegression(fit_intercept = True)
+    logreg = LogisticRegression(
+        fit_intercept = True, # also fit the intercept
+        penalty = None, # no regularisation (default in R)
+    )
     logreg.fit(X, Y)
     coeffs = np.insert(logreg.coef_, 0, logreg.intercept_)
     assert len(coeffs) == 5
@@ -166,8 +169,8 @@ def simulate(configs):
 
     # Generate the compute arguments
     num_samples = np.logspace(
-        start = 2,
-        stop = 4,
+        start = np.log10(200), # too low = convergence issues
+        stop = np.log10(10000),
         num = configs.side_length,
         base = 10.0,
     )
