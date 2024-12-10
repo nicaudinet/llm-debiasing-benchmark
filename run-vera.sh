@@ -12,10 +12,10 @@
 #SBATCH --time=1-00:00:00
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
-#SBATCH --output=results/logs/output/output_%A_%a.log
-#SBATCH --error=results/logs/error/error_%A_%a.log
+#SBATCH --output=results/run2/logs/output/output_%A_%a.log
+#SBATCH --error=results/run2/logs/error/error_%A_%a.log
 
 module reset
 module load R
 
-apptainer exec container.sif python experiment.py "results/data_${SLURM_ARRAY_TASK_ID}.npz"
+apptainer exec container.sif python experiment.py "results/run2/data_${SLURM_ARRAY_TASK_ID}.npz"
