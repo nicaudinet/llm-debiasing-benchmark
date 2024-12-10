@@ -27,15 +27,14 @@ data_file <- args[1]
 # Cannot change
 
 CL <- 0.95 # confidence level
-num_coeffs <- 4 + 1 # 4 independent variables + intercept
+num_coeffs <- 4 + 1 # independent variables + intercept
 
 # Can change
 
 pred_accuracy <- 0.9 # "LLM" prediction accuracy
-R <- 1 # number of repetitions for coverage
-NN <- 2 # side length of the grid (2 <= NN)
-# ncores <- as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
-ncores <- 4
+NN <- 10 # side length of the grid (2 <= NN)
+ncores <- as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
+# ncores <- 4
 
 ###############
 ## Functions ##
