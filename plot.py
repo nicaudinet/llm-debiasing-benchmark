@@ -6,18 +6,18 @@ import os
 from tqdm import tqdm 
 from pathlib import Path
 
-epsilon = 1e-5
-datadir = Path("results/")
-plotdir = Path("plots/")
+datadir = Path("results/run2")
+plotdir = Path("results/run2/plots/")
 
-problem_runs = [ 199, 485, 560, 762, 855, 994, ]
+problem_runs = [] # [ 199, 485, 560, 762, 855, 994, ]
 problem_files = [ f"data_{i}.npz" for i in problem_runs ]
 
 print("Gathering data from files")
 coeffs_all = []
 coeffs_exp = []
 coeffs_dsl = []
-for file in tqdm(os.listdir(datadir)):
+files = (f for f in os.listdir(datadir) if os.path.isfile(datadir / Path(f)))
+for file in tqdm(files):
     if file in problem_files:
         continue
     data = np.load(datadir / Path(file))
@@ -29,67 +29,56 @@ coeffs_exp = np.stack(coeffs_exp, axis=0)
 coeffs_dsl = np.stack(coeffs_dsl, axis=0)
 print(f"Total files: {coeffs_all.shape[0]}")
 
-def plot_coeffs(coeffs, ax, norm, cbar_ax, title):
-    image = coeffs.copy()
-    for i in range(10):
-        for j in range(10):
-            if i < j:
-                image[i,j] = float("NaN")
-    image = np.flip(image, axis=0)
-    sns.heatmap(
-        image,
-        ax = ax,
-        cmap = "coolwarm",
-        norm = norm,
-        square = True,
-        annot = True,
-        fmt = ".2f",
-        cbar_ax = cbar_ax,
-    )
-    ax.set_title(title)
-    ax.set_xlabel("Number of expert samples")
-    ax.set_ylabel("Number of total samples")
-    ax.set_xticks(ticks=[0.5, 5, 9.5], labels=["$10^2$", "$10^3$", "$10^4$"])
-    ax.set_yticks(ticks=[9.5, 5, 0.5], labels=["$10^2$", "$10^3$", "$10^4$"])
+# Only keep samples with N = 10000 (total samples)
+coeffs_all = coeffs_all[:, -1, :, :]
+coeffs_exp = coeffs_exp[:, -1, :, :]
+coeffs_dsl = coeffs_dsl[:, -1, :, :]
 
-rows = 1
-cols = 3
-fig, axs = plt.subplots(rows, cols, figsize=(cols * 10, rows * 8))
-cbar_ax = fig.add_axes((.91, .15, .02, .7))
-norm = LogNorm(0.4, 1.7)
-plot_coeffs(coeffs_all.mean(axis=(0,3)), axs[0], norm, cbar_ax, "coeffs_all")
-plot_coeffs(coeffs_exp.mean(axis=(0,3)), axs[1], norm, cbar_ax, "coeffs_exp")
-plot_coeffs(coeffs_dsl.mean(axis=(0,3)), axs[2], norm, cbar_ax, "coeffs_dsl")
-fig.tight_layout(rect=(0, 0, .9, 1))
-plt.savefig(plotdir / Path("coeffs_mean.svg"))
+print(coeffs_all.shape)
+print(coeffs_exp.shape)
+print(coeffs_dsl.shape)
 
-def calc_bias(Y, Y_hat):
-    error_std = (Y - Y_hat) # / np.maximum(epsilon, Y)
-    return error_std.mean(axis=(0,3))
+# Compute RMSE with all
+rmse_exp = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=(0,2)))
+rmse_dsl = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=(0,2)))
 
-rows = 1
-cols = 3
-fig, axs = plt.subplots(rows, cols, figsize=(cols * 10, rows * 8))
-cbar_ax = fig.add_axes((.91, .15, .02, .7))
-norm = Normalize(-1.25, 1.25)
-bias_exp = calc_bias(coeffs_all, coeffs_exp)
-bias_dsl = calc_bias(coeffs_all, coeffs_dsl)
-error = bias_exp - bias_dsl
-plot_coeffs(bias_exp, axs[0], norm, cbar_ax, "Bias_exp = coeffs_all - coeffs_exp")
-plot_coeffs(bias_dsl, axs[1], norm, cbar_ax, "Bias_dsl = coeffs_all - coeffs_dsl")
-plot_coeffs(error, axs[2], norm, cbar_ax, "Error = bias_exp - bias_dsl")
-fig.tight_layout(rect=(0, 0, .9, 1))
-plt.savefig(plotdir / Path("bias.svg"))
+assert rmse_exp.shape[0] == coeffs_exp.shape[1]
+assert rmse_dsl.shape[0] == coeffs_dsl.shape[1]
 
-def calc_rmse(Y, Y_hat):
-    return np.sqrt(np.mean(np.square(Y - Y_hat), axis=(0,3)))
+# Bounds for exp
+rmse_exp_sd = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=2)).std(axis=0)
+upper_exp = rmse_exp + 2 * rmse_exp_sd
+lower_exp = rmse_exp - 2 * rmse_exp_sd
 
-rows = 1
-cols = 2
-fig, axs = plt.subplots(rows, cols, figsize=(cols * 10, rows * 8))
-cbar_ax = fig.add_axes((.91, .15, .02, .7))
-norm = Normalize()
-plot_coeffs(calc_rmse(coeffs_all, coeffs_exp), axs[0], norm, cbar_ax, "RMSE(all,exp)")
-plot_coeffs(calc_rmse(coeffs_all, coeffs_dsl), axs[1], norm, cbar_ax, "RMSE(all,dsl)")
-fig.tight_layout(rect=(0, 0, .9, 1))
-plt.savefig(plotdir / Path("rmse.svg"))
+rmse_dsl_sd = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=2)).std(axis=0)
+upper_dsl = rmse_dsl + 2 * rmse_dsl_sd
+lower_dsl = rmse_dsl - 2 * rmse_dsl_sd
+
+# Expert sample dimentions
+X = np.logspace(
+    start = np.log10(200), # too low = convergence issues
+    stop = np.log10(10000),
+    num = 10,
+    base = 10.0,
+)
+X = np.round(X).astype(int)
+
+colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+plt.figure()
+plt.xscale('log')
+plt.title("DSL vs. only expert-annotated samples (N = 10000)")
+plt.xlabel("Number of expert-annotated samples")
+plt.ylabel("RMSE")
+
+plt.fill_between(X, lower_exp, upper_exp, color = colors[0], alpha = 0.2)
+plt.plot(X, rmse_exp, "o-", color = colors[0], label = "RMSE(all,exp)")
+
+plt.fill_between(X, lower_dsl, upper_dsl, color = colors[1], alpha = 0.2)
+plt.plot(X, rmse_dsl, "o-", color = colors[1], label = "RMSE(all,dsl)")
+
+plt.legend()
+
+plt.savefig(plotdir / Path("rmse_1D.pdf"))
+plt.savefig(plotdir / Path("rmse_1D.png"))
+plt.show()
