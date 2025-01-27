@@ -2,8 +2,19 @@ from pathlib import Path
 import pandas as pd
 from transformers import pipeline
 from sklearn.metrics import accuracy_score
+import re
+
+###########
+# Configs #
+###########
 
 datapath = Path("/Users/audinet/Datasets/amazon_reviews/original_reviews.txt")
+outpath = Path("resources/amazon_annotated.pkl")
+
+###########################
+# Parse data to DataFrame #
+###########################
+
 with open(datapath, "r") as file:
     reviews = file.read().splitlines()
 
@@ -13,31 +24,67 @@ for review in reviews:
     data["topic"].append(words[0])
     data["sentiment"].append(1 if words[1] == "pos" else 0)
     data["filename"].append(words[2])
-    # Truncate reviews to 512 characters so that review fits into distilbert
-    data["text"].append(" ".join(words[3:])[:512])
+    data["text"].append(" ".join(words[3:]))
 
 data = pd.DataFrame(data)
-# data = data[:10] # REMOVE ME
-print(data)
+data = data[:10]
+original_labels = list(data.columns.values)
 
+####################
+# Extract features #
+####################
+
+# Encode topic as a feature
+topics = pd.unique(data["topic"])
+topicNum = dict(zip(topics, range(len(topics) + 1)))
+data["x1"] = data["topic"].map(lambda x: topicNum[x])
+
+# Encode review length as a feature
+data["x2"] = data["text"].map(lambda x: len(x))
+
+# Encode "number of repetitions of the word i" as a feature
+def repetitions_i(text):
+    return sum(1 for _ in re.finditer(r"\b%s\b" % re.escape("i"), text))
+data["x3"] = data["text"].map(lambda x: repetitions_i(x))
+
+######################
+# Annotate with BERT #
+######################
+
+# Truncate reviews to 512 characters so that review fits into distilbert
 sentiment_pipeline = pipeline(
     "sentiment-analysis",
     model = "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
     revision = "714eb0f",
 )
-
-sentiments = sentiment_pipeline(data["text"].tolist())
+text_truncated = data["text"].map(lambda x: x[:512]).tolist()
+sentiments = sentiment_pipeline(text_truncated)
 sentiments = [1 if d["label"] == "POSITIVE" else 0 for d in sentiments]
-data["llm_annotations"] = sentiments
-print(data)
 
-data.to_pickle("amazon_reviews_annotated.pkl")
+# Encode y and y_hat
+data["y"] = data["sentiment"]
+data["y_hat"] = sentiments
 
-accuracy = accuracy_score(data["sentiment"], data["llm_annotations"])
+###################
+# LLM Accuracices #
+###################
+
+accuracy = accuracy_score(data["y"], data["y_hat"])
 print(f"\nLLM Accuracy (all samples): {accuracy:0.3f}")
 
 print("\nAccuracies by topic:")
 for topic in pd.unique(data["topic"]):
     d = data[data["topic"] == topic]
-    accuracy = accuracy_score(d["sentiment"], d["llm_annotations"])
+    accuracy = accuracy_score(d["y"], d["y_hat"])
     print(f" - {topic}    \t{accuracy:0.3f}")
+
+##############
+# Save data # 
+##############
+
+data = data.drop(columns = original_labels)
+print("\nFinal data:")
+print(data.head())
+
+data.to_pickle(outpath)
+print(f"\nSaved data to {outpath}")
