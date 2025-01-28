@@ -1,21 +1,15 @@
-from pathlib import Path
 import pandas as pd
 from transformers import pipeline
 from sklearn.metrics import accuracy_score
 import re
 
-###########
-# Configs #
-###########
-
-datapath = Path("/Users/audinet/Datasets/amazon_reviews/original_reviews.txt")
-outpath = Path("resources/amazon_annotated.pkl")
+import config
 
 ###########################
 # Parse data to DataFrame #
 ###########################
 
-with open(datapath, "r") as file:
+with open(config.original_reviews_path, "r") as file:
     reviews = file.read().splitlines()
 
 data = {k: [] for k in ["topic", "sentiment", "filename", "text"]}
@@ -27,7 +21,7 @@ for review in reviews:
     data["text"].append(" ".join(words[3:]))
 
 data = pd.DataFrame(data)
-data = data[:10]
+data = data[:config.num_samples]
 original_labels = list(data.columns.values)
 
 ####################
@@ -54,8 +48,8 @@ data["x3"] = data["text"].map(lambda x: repetitions_i(x))
 # Truncate reviews to 512 characters so that review fits into distilbert
 sentiment_pipeline = pipeline(
     "sentiment-analysis",
-    model = "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
-    revision = "714eb0f",
+    model = config.model,
+    revision = config.revision,
 )
 text_truncated = data["text"].map(lambda x: x[:512]).tolist()
 sentiments = sentiment_pipeline(text_truncated)
@@ -86,5 +80,5 @@ data = data.drop(columns = original_labels)
 print("\nFinal data:")
 print(data.head())
 
-data.to_pickle(outpath)
-print(f"\nSaved data to {outpath}")
+data.to_pickle(config.annotated_reviews_path)
+print(f"\nSaved data to {config.annotated_reviews_path}")

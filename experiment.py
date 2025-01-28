@@ -1,6 +1,5 @@
 import numpy as np
 from dataclasses import dataclass
-import scipy
 from sklearn.linear_model import LogisticRegression
 import tempfile
 import rpy2.robjects as ro
@@ -10,65 +9,7 @@ from concurrent.futures import ProcessPoolExecutor
 import os
 import sys
 
-@dataclass
-class Configs:
-    """
-    Configuration parameters for the experiment
-    """
-    # side length of the experiment grid
-    side_length: int 
-    # confidence level for the standard error
-    confidence_level: float
-    # prediction accuracy of the simulated LLM
-    prediction_accuracy: float
-    # number of coefficients in the logistic regression
-    num_coefficients: int
-    # name of the file the data will be saved in
-    datafile: Path
-    # Number of cores to parallelise over
-    num_cores: int
-
-def generate(num_samples, prediction_accuracy):
-    """
-    Generate the simulated data (following Appendix E)
-    """
-    # number of covariates
-    M = 10
-
-    # Generate the covariates
-    means = np.zeros(M)
-    covs = 0.3 * np.ones((M, M))
-    covs = covs + 0.7 * np.eye(M)
-    X = np.random.multivariate_normal(means, covs, size=num_samples)
-
-    # Binarize X_i2
-    X[:,1] = (X[:,1] > scipy.stats.norm.ppf(0.8)).astype(np.float32)
-
-    # Generate the true outcome Y as a function of the covariates
-    X1, X2, X3, X4, X6 = X[:,0], X[:,1], X[:,2], X[:,3], X[:,5]
-    a = 0.1 / (1.0 + np.exp(0.5 * X3 - 0.5 * X2))
-    b = 1.3 * X4 / (1.0 + np.exp(-0.1 * X2))
-    c = 1.5 * X4 * X6
-    d = 0.5 * X1 * X2
-    e = 1.3 * X1
-    f = X2
-    W = a + b + c + d + e + f
-    Y_true = np.random.binomial(1, scipy.special.expit(W), size=num_samples)
-    Y_true = Y_true.astype(float)
-
-    # Make training data from true covariates
-    X_train = np.stack([
-        X[:,0],
-        X[:,0] ** 2,
-        X[:,1],
-        X[:,3],
-    ], axis=1)
-
-    # Simulate the LLM annotations
-    p = np.random.binomial(1, prediction_accuracy, size=num_samples)
-    Y_pred = p * Y_true + (1 - p) * (1 - Y_true)
-
-    return X_train, Y_true, Y_pred
+from generate import generate
 
 def fit(X, Y):
     """
@@ -140,89 +81,96 @@ def fit_dsl(X, Y_true, Y_pred, selected):
     return coeffs
 
 @dataclass
-class SampleConfig:
-    # Total number of samples (== number of predicted samples)
+class SampleParams:
+    # total number of samples
     N: int
-    # Number of samples for expert annotation
+    # number of expert-annotated amples
     n: int
-    # The prediction accuracy
+    # prediction accuracy
     pq: float
 
-def compute_coeffs(sample: SampleConfig):
+def compute_coeffs(params: SampleParams):
     """
     Generate the data and compute the coefficients for the three scenarios
     """
-    selected = np.random.choice(sample.N, size=sample.n, replace=False)
-    X, Y, Y_hat = generate(sample.N, sample.pq)
+    selected = np.random.choice(params.N, size=params.n, replace=False)
+    X, Y, Y_hat = generate(params.N, params.pq)
     coeffs_all = fit(X, Y)
     coeffs_exp = fit(X[selected], Y[selected])
     coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
     return coeffs_all, coeffs_exp, coeffs_dsl
 
-def simulate(configs):
+
+def simulate(
+        # total number of samples
+        num_total_samples: int,
+        # number of expert annotation to try
+        num_data_points: int,
+        # minimum number of expert annotations
+        min_expert_samples: int,
+        # prediction accuracy of the simulated LLM
+        prediction_accuracy: float,
+        # number of coefficients in the logistic regression
+        num_coefficients: int,
+        # Number of cores to parallelise over
+        num_cores: int,
+    ):
 
     # Initialise arrays
-    size = (configs.side_length, configs.side_length, configs.num_coefficients)
+    size = (num_data_points, num_coefficients)
     coeffs_all = np.zeros(size)
     coeffs_exp = np.zeros(size)
     coeffs_dsl = np.zeros(size)
 
     # Generate the compute arguments
-    num_samples = np.logspace(
-        start = np.log10(200), # too low = convergence issues
-        stop = np.log10(10000),
-        num = configs.side_length,
+    num_expert_samples = np.logspace(
+        start = np.log10(min_expert_samples), # too low = convergence issues
+        stop = np.log10(num_total_samples),
+        num = num_data_points,
         base = 10.0,
     )
-    num_samples = np.round(num_samples).astype(int)
-    cells = [(i,j) for i in range(configs.side_length) for j in range(i+1)]
-    samples = []
-    for i, j in cells:
-        sample = SampleConfig(
-            N = num_samples[i],
-            n = num_samples[j],
-            pq = configs.prediction_accuracy,
-        )
-        samples.append(sample)
+    params = []
+    for n in np.round(num_expert_samples).astype(int):
+        params.append(SampleParams(
+            N = num_total_samples,
+            n = n,
+            pq = prediction_accuracy,
+        ))
 
     # Compute the coefficients concurrently 
-    with ProcessPoolExecutor(max_workers=4) as executor:
-        for (i,j), coeffs in zip(cells, executor.map(compute_coeffs, samples)):
-            print(f"Computed cell ({i},{j})")
-            coeffs_all[i,j,:] = coeffs[0]
-            coeffs_exp[i,j,:] = coeffs[1]
-            coeffs_dsl[i,j,:] = coeffs[2]
+    with ProcessPoolExecutor(max_workers = num_cores) as executor:
+        for i, coeffs in enumerate(executor.map(compute_coeffs, params)):
+            print(f"Computed data point ({i})")
+            coeffs_all[i,:] = coeffs[0]
+            coeffs_exp[i,:] = coeffs[1]
+            coeffs_dsl[i,:] = coeffs[2]
 
-    return coeffs_all, coeffs_exp, coeffs_dsl
+    return num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl
 
 
 if __name__ == "__main__":
 
-    
     if "SLURM_CPUS_ON_NODE" in os.environ:
         num_cores = int(os.environ["SLURM_CPUS_ON_NODE"])
     else:
-        num_cores = 32
+        num_cores = 10
+    print(f"Using {num_cores} cores")
 
-#    if "SLURM_ARRAY_TASK_ID" in os.environ:
-#       task_id = os.environ["SLURM_CPUS_ON_NODE"]
-#       datafile = Path(f"results/data_{task_id}.npz")
-#   else:
-#       datafile = Path("data.npz")
-
-    configs = Configs(
-        side_length = 10,
-        confidence_level = 0.95,
+    num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl = simulate(
+        num_total_samples = 10000,
+        num_data_points = 3,
+        min_expert_samples = 200,
         prediction_accuracy = 0.9,
         num_coefficients = 5, # 4 Xs + intercept
-        datafile = Path(sys.argv[1]),
         num_cores = num_cores,
     )
 
-    coeffs_all, coeffs_exp, coeffs_dsl = simulate(configs)
+    datafile = Path(sys.argv[1])
+    print(f"Saving results to {datafile}")
     np.savez(
-        configs.datafile,
-        coeffs_all=coeffs_all,
-        coeffs_exp=coeffs_exp,
-        coeffs_dsl=coeffs_dsl
+        datafile,
+        num_expert_samples = num_expert_samples,
+        coeffs_all = coeffs_all,
+        coeffs_exp = coeffs_exp,
+        coeffs_dsl = coeffs_dsl
     )
