@@ -2,14 +2,21 @@ import pandas as pd
 from transformers import pipeline
 from sklearn.metrics import accuracy_score
 import re
+import sys
+from pathlib import Path
 
-import config
+#########
+# Paths #
+#########
+
+original_reviews_path = Path(sys.argv[1])
+annotated_reviews_path = Path(sys.argv[2])
 
 ###########################
 # Parse data to DataFrame #
 ###########################
 
-with open(config.original_reviews_path, "r") as file:
+with open(original_reviews_path, "r") as file:
     reviews = file.read().splitlines()
 
 data = {k: [] for k in ["topic", "sentiment", "filename", "text"]}
@@ -21,7 +28,8 @@ for review in reviews:
     data["text"].append(" ".join(words[3:]))
 
 data = pd.DataFrame(data)
-data = data[:config.num_samples]
+print(len(data))
+data = data[:1000]
 original_labels = list(data.columns.values)
 
 ####################
@@ -41,6 +49,9 @@ def repetitions_i(text):
     return sum(1 for _ in re.finditer(r"\b%s\b" % re.escape("i"), text))
 data["x3"] = data["text"].map(lambda x: repetitions_i(x))
 
+# Encode number of words as a feature
+data["x4"] = data["text"].map(lambda x: len(x.split(" ")))
+
 ######################
 # Annotate with BERT #
 ######################
@@ -48,8 +59,8 @@ data["x3"] = data["text"].map(lambda x: repetitions_i(x))
 # Truncate reviews to 512 characters so that review fits into distilbert
 sentiment_pipeline = pipeline(
     "sentiment-analysis",
-    model = config.model,
-    revision = config.revision,
+    model = "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+    revision = "714eb0f",
 )
 text_truncated = data["text"].map(lambda x: x[:512]).tolist()
 sentiments = sentiment_pipeline(text_truncated)
@@ -80,5 +91,5 @@ data = data.drop(columns = original_labels)
 print("\nFinal data:")
 print(data.head())
 
-data.to_pickle(config.annotated_reviews_path)
-print(f"\nSaved data to {config.annotated_reviews_path}")
+data.to_pickle(annotated_reviews_path)
+print(f"\nSaved data to {annotated_reviews_path}")
