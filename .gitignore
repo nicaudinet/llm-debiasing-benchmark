@@ -5,3 +5,4 @@ python/plots
 amazon_reviews_annotated.pkl
 resources
 __pycache__
+amazon_annotated.pkl

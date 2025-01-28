@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=dsl-use
+#SBATCH --job-name=dsl-use-simulation
 #SBATCH --account=C3SE2024-1-17
 #SBATCH --partition=vera
 

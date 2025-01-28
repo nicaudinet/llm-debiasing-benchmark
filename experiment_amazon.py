@@ -86,8 +86,10 @@ if __name__ == "__main__":
         num_cores = 10
     print(f"Using {num_cores} cores")
 
-    datafile = Path(sys.argv[1])
-    data = pd.read_pickle(config.annotated_reviews_path)
+    annotated_reviews_path = Path(sys.argv[1])
+    results_path = Path(sys.argv[2])
+
+    data = pd.read_pickle(annotated_reviews_path)
 
     num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl = simulate(
         data = data,
@@ -100,7 +102,7 @@ if __name__ == "__main__":
 
     print(f"Saving results to {datafile}")
     np.savez(
-        datafile,
+        results_path,
         num_expert_samples = num_expert_samples,
         coeffs_all = coeffs_all,
         coeffs_exp = coeffs_exp,
