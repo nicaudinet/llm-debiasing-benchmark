@@ -29,7 +29,6 @@ for review in reviews:
 
 data = pd.DataFrame(data)
 print(len(data))
-data = data[:1000]
 original_labels = list(data.columns.values)
 
 ####################
