@@ -6,7 +6,6 @@ import os
 import sys
 import pandas as pd
 
-import config
 from fitting import fit, fit_dsl
 
 @dataclass
@@ -89,8 +88,10 @@ if __name__ == "__main__":
     annotated_reviews_path = Path(sys.argv[1])
     results_path = Path(sys.argv[2])
 
+    print("Reading the data")
     data = pd.read_pickle(annotated_reviews_path)
 
+    print("Running the experiment")
     num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl = simulate(
         data = data,
         num_data_points = 10,
@@ -100,7 +101,7 @@ if __name__ == "__main__":
         num_cores = num_cores,
     )
 
-    print(f"Saving results to {datafile}")
+    print(f"Saving results to {results_path}")
     np.savez(
         results_path,
         num_expert_samples = num_expert_samples,

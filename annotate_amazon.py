@@ -28,7 +28,6 @@ for review in reviews:
     data["text"].append(" ".join(words[3:]))
 
 data = pd.DataFrame(data)
-print(len(data))
 original_labels = list(data.columns.values)
 
 ####################

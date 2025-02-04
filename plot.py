@@ -45,9 +45,11 @@ lower_dsl = rmse_dsl - 2 * rmse_dsl_sd
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
+print(coeffs_all.shape)
+
 plt.figure()
 plt.xscale('log')
-plt.title("DSL vs. only expert-annotated samples (N = 10000)")
+plt.title(f"DSL vs. only expert-annotated samples")
 plt.xlabel("Number of expert-annotated samples")
 plt.ylabel("RMSE")
 

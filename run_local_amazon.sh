@@ -11,9 +11,9 @@ echo "Annotating the reviews"
 python3.12 annotate_amazon.py $original_reviews_path $annotated_reviews_path
 
 echo "Running the experiment"
-for i in $(seq -w 1 10);
+for i in $(seq -w 1 200);
 do
-    python3.12 experiment_amazon.py $result_dir/data_amazon_$i.npz
+    python3.12 experiment_amazon.py $annotated_reviews_path $result_dir/data_amazon_$i.npz
 done
 
 echo "Plotting the results"
