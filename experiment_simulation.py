@@ -72,12 +72,12 @@ def compute_coeffs(params: SampleParams):
 
 
 def simulate(
-        # total number of samples
-        num_total_samples: int,
+        # number of expert samples
+        num_expert_samples: int,
         # number of expert annotation to try
         num_data_points: int,
-        # minimum number of expert annotations
-        min_expert_samples: int,
+        # maximum number of expert annotations
+        max_total_samples: int,
         # prediction accuracy of the simulated LLM
         prediction_accuracy: float,
         # number of coefficients in the logistic regression
@@ -93,17 +93,17 @@ def simulate(
     coeffs_dsl = np.zeros(size)
 
     # Generate the compute arguments
-    num_expert_samples = np.logspace(
-        start = np.log10(min_expert_samples), # too low = convergence issues
-        stop = np.log10(num_total_samples),
+    num_total_samples = np.logspace(
+        start = np.log10(num_expert_samples), # too low = convergence issues
+        stop = np.log10(max_total_samples),
         num = num_data_points,
         base = 10.0,
     )
     params = []
-    for n in np.round(num_expert_samples).astype(int):
+    for N in np.round(num_total_samples).astype(int):
         params.append(SampleParams(
-            N = num_total_samples,
-            n = n,
+            N = N,
+            n = num_expert_samples,
             pq = prediction_accuracy,
         ))
 
@@ -115,7 +115,7 @@ def simulate(
             coeffs_exp[i,:] = coeffs[1]
             coeffs_dsl[i,:] = coeffs[2]
 
-    return num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl
+    return num_total_samples, coeffs_all, coeffs_exp, coeffs_dsl
 
 
 if __name__ == "__main__":
@@ -123,23 +123,25 @@ if __name__ == "__main__":
     if "SLURM_CPUS_ON_NODE" in os.environ:
         num_cores = int(os.environ["SLURM_CPUS_ON_NODE"])
     else:
-        num_cores = 10
+        num_cores = 11
     print(f"Using {num_cores} cores")
 
-    num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl = simulate(
-        num_total_samples = 10000,
-        num_data_points = 3,
-        min_expert_samples = 200,
+    datafile = Path(sys.argv[1])
+    n = int(sys.argv[2])
+
+    num_total_samples, coeffs_all, coeffs_exp, coeffs_dsl = simulate(
+        num_expert_samples = n,
+        num_data_points = 10,
+        max_total_samples = 10000,
         prediction_accuracy = 0.9,
         num_coefficients = 5, # 4 Xs + intercept
         num_cores = num_cores,
     )
 
-    datafile = Path(sys.argv[1])
     print(f"Saving results to {datafile}")
     np.savez(
         datafile,
-        num_expert_samples = num_expert_samples,
+        num_total_samples = num_total_samples,
         coeffs_all = coeffs_all,
         coeffs_exp = coeffs_exp,
         coeffs_dsl = coeffs_dsl
