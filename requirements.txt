@@ -6,5 +6,6 @@ tqdm
 seaborn
 matplotlib
 rpy2
-transformers
 torch
+transformers
+datasets
