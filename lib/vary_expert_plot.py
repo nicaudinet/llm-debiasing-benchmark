@@ -48,7 +48,7 @@ print(coeffs_all.shape)
 plt.figure()
 plt.xscale('log')
 plt.title(f"Varying the number of expert samples")
-plt.xlabel("Number of expert samples")
+plt.xlabel("Number of expert samples (n)")
 plt.ylabel("RMSE w.r.t. gold annotations for all samples")
 
 plt.fill_between(
@@ -73,6 +73,5 @@ plt.plot(X, rmse_dsl, "o-", color = colors[1], label = "DSL")
 
 plt.legend()
 
-plt.savefig(plotdir / Path(f"rmse_misinfo.pdf"))
-plt.savefig(plotdir / Path(f"rmse_misinfo.png"))
-# plt.show()
+plt.savefig(plotdir / Path(f"rmse.pdf"))
+plt.savefig(plotdir / Path(f"rmse.png"))
