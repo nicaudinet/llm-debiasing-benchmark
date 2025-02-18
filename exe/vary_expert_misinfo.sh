@@ -10,10 +10,12 @@ plot_dir="$result_dir/plot"
 mkdir -p $data_dir
 mkdir -p $plot_dir
 
-# python3.12 \
-#     "$base_dir/lib/annotate_misinfo.py" \
-#     $original_data_path \
-#     $annotated_data_path
+if [ ! -f $annotated_data_path ]; then
+    python3.12 \
+        "$base_dir/lib/annotate_misinfo.py" \
+        $original_data_path \
+        $annotated_data_path
+fi
 
 for i in $(seq -w 1 2); do
     python3.12 \
