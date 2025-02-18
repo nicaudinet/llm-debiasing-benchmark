@@ -18,22 +18,18 @@ def compute_coeffs(params: SampleParams):
     """
     Generate the data and compute the coefficients for the three scenarios
     """
+
+    X = params.data[["x1", "x2", "x3", "x4"]].to_numpy()
+    Y = params.data["y"].to_numpy().astype(float)
+    Y_hat = params.data["y_hat"].to_numpy()
+    coeffs_all = fit(X, Y)
+
     samples = np.random.choice(len(params.data), size=params.N, replace=False)
     selected = np.random.choice(params.N, size=params.n, replace=False)
-
-    X = params.data[["x1", "x2", "x3", "x4"]]
-    X = X.to_numpy()
     X = X[samples]
-
-    Y = params.data["y"]
-    Y = Y.to_numpy().astype(float)
     Y = Y[samples]
-
-    Y_hat = params.data["y_hat"]
-    Y_hat = Y_hat.to_numpy()
     Y_hat = Y_hat[samples]
 
-    coeffs_all = fit(X, Y)
     coeffs_exp = fit(X[selected], Y[selected])
     coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
 

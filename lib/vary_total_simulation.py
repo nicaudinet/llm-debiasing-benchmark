@@ -52,22 +52,27 @@ def generate(num_samples, prediction_accuracy):
 
 @dataclass
 class SampleParams:
-    # total number of samples
+    max_total_samples: int
     N: int
-    # number of expert-annotated amples
     n: int
-    # prediction accuracy
     pq: float
 
 def compute_coeffs(params: SampleParams):
     """
     Generate the data and compute the coefficients for the three scenarios
     """
-    selected = np.random.choice(params.N, size=params.n, replace=False)
-    X, Y, Y_hat = generate(params.N, params.pq)
+    X, Y, Y_hat = generate(params.max_total_samples, params.pq)
     coeffs_all = fit(X, Y)
+
+    samples = np.random.choice(params.max_total_samples, size=params.N, replace=False)
+    selected = np.random.choice(params.N, size=params.n, replace=False)
+    X = X[samples]
+    Y = Y[samples]
+    Y_hat = Y_hat[samples]
+
     coeffs_exp = fit(X[selected], Y[selected])
     coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
+
     return coeffs_all, coeffs_exp, coeffs_dsl
 
 
@@ -102,6 +107,7 @@ def simulate(
     params = []
     for N in np.round(num_total_samples).astype(int):
         params.append(SampleParams(
+            max_total_samples,
             N = N,
             n = num_expert_samples,
             pq = prediction_accuracy,
