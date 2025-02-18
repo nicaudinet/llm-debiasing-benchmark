@@ -6,7 +6,6 @@ import sys
 
 datadir = Path(sys.argv[1])
 plotdir = Path(sys.argv[2])
-n = sys.argv[3]
 
 print("Gathering data from files")
 coeffs_all = []
@@ -23,9 +22,9 @@ coeffs_exp = np.stack(coeffs_exp, axis=0)
 coeffs_dsl = np.stack(coeffs_dsl, axis=0)
 print(f"Total files: {coeffs_all.shape[0]}")
 
-# Assume X-axis (number of total samples) is the same for all files
+# Assume X-axis (number of expert samples) is the same for all files
 data = np.load(datadir / Path(files[0]))
-X = data["num_total_samples"]
+X = data["num_expert_samples"]
 
 # Compute RMSE with all
 rmse_exp = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=(0,2)))
@@ -34,7 +33,6 @@ rmse_dsl = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=(0,2)))
 assert rmse_exp.shape[0] == coeffs_exp.shape[1]
 assert rmse_dsl.shape[0] == coeffs_dsl.shape[1]
 
-# Bounds for exp
 rmse_exp_sd = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=2)).std(axis=0)
 upper_exp = rmse_exp + 2 * rmse_exp_sd
 lower_exp = rmse_exp - 2 * rmse_exp_sd
@@ -49,8 +47,8 @@ print(coeffs_all.shape)
 
 plt.figure()
 plt.xscale('log')
-plt.title(f"Varying the number of total samples (n = {n})")
-plt.xlabel("Number of total samples")
+plt.title(f"Varying the number of expert samples")
+plt.xlabel("Number of expert samples")
 plt.ylabel("RMSE w.r.t. gold annotations for all samples")
 
 plt.fill_between(
@@ -61,7 +59,7 @@ plt.fill_between(
     alpha = 0.2,
     linewidth = 0,
 )
-plt.plot(X, rmse_exp, "o-", color = colors[0], label = "expert samples only")
+plt.plot(X, rmse_exp, "o-", color = colors[0], label = "expert only")
 
 plt.fill_between(
     X,
@@ -75,6 +73,6 @@ plt.plot(X, rmse_dsl, "o-", color = colors[1], label = "DSL")
 
 plt.legend()
 
-plt.savefig(plotdir / Path(f"rmse_n{n}.pdf"))
-plt.savefig(plotdir / Path(f"rmse_n{n}.png"))
+plt.savefig(plotdir / Path(f"rmse_misinfo.pdf"))
+plt.savefig(plotdir / Path(f"rmse_misinfo.png"))
 # plt.show()

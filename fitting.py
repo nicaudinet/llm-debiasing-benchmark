@@ -12,6 +12,7 @@ def fit(X, Y):
     logreg = LogisticRegression(
         fit_intercept = True, # also fit the intercept
         penalty = None, # no regularisation (default in R)
+        max_iter = 1000,
     )
     logreg.fit(X, Y)
     coeffs = np.insert(logreg.coef_, 0, logreg.intercept_)

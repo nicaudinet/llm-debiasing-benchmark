@@ -14,8 +14,6 @@ class SampleParams:
     data: pd.DataFrame
     # number of expert-annotated amples
     n: int
-    # prediction accuracy
-    pq: float
 
 def compute_coeffs(params: SampleParams):
     """
@@ -23,8 +21,8 @@ def compute_coeffs(params: SampleParams):
     """
     selected = np.random.choice(len(params.data), size=params.n, replace=False)
     X = params.data[["x1", "x2", "x3", "x4"]].to_numpy()
-    Y = params.data["y"]
-    Y_hat = params.data["y_hat"]
+    Y = params.data["y"].to_numpy().astype(float)
+    Y_hat = params.data["y_hat"].to_numpy()
     coeffs_all = fit(X, Y)
     coeffs_exp = fit(X[selected], Y[selected])
     coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
@@ -37,8 +35,6 @@ def simulate(
         num_data_points: int,
         # minimum number of expert annotations
         min_expert_samples: int,
-        # prediction accuracy of the simulated LLM
-        prediction_accuracy: float,
         # number of coefficients in the logistic regression
         num_coefficients: int,
         # Number of cores to parallelise over
@@ -63,7 +59,6 @@ def simulate(
         params.append(SampleParams(
             data = data,
             n = n,
-            pq = prediction_accuracy,
         ))
 
     # Compute the coefficients concurrently 
@@ -85,18 +80,17 @@ if __name__ == "__main__":
         num_cores = 10
     print(f"Using {num_cores} cores")
 
-    annotated_reviews_path = Path(sys.argv[1])
+    annotated_data_path = Path(sys.argv[1])
     results_path = Path(sys.argv[2])
 
     print("Reading the data")
-    data = pd.read_pickle(annotated_reviews_path)
+    data = pd.read_pickle(annotated_data_path)
 
     print("Running the experiment")
     num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl = simulate(
         data = data,
         num_data_points = 10,
         min_expert_samples = 200,
-        prediction_accuracy = 0.9,
         num_coefficients = 5, # 4 Xs + intercept
         num_cores = num_cores,
     )
