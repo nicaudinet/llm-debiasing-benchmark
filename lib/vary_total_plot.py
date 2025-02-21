@@ -21,7 +21,9 @@ for file in files:
 coeffs_all = np.stack(coeffs_all, axis=0)
 coeffs_exp = np.stack(coeffs_exp, axis=0)
 coeffs_dsl = np.stack(coeffs_dsl, axis=0)
-print(f"Total files: {coeffs_all.shape[0]}")
+
+total_reps = coeffs_all.shape[0]
+print(f"Total files: {total_reps}")
 
 # Assume X-axis (number of expert samples) is the same for all files
 data = np.load(datadir / Path(files[0]))
@@ -34,13 +36,15 @@ rmse_dsl = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=(0,2)))
 assert rmse_exp.shape[0] == coeffs_exp.shape[1]
 assert rmse_dsl.shape[0] == coeffs_dsl.shape[1]
 
-rmse_exp_sd = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=2)).std(axis=0)
-upper_exp = rmse_exp + 2 * rmse_exp_sd
-lower_exp = rmse_exp - 2 * rmse_exp_sd
+exp_sd = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=2)).std(axis=0)
+exp_SE = exp_sd / np.sqrt(total_reps)
+upper_exp = rmse_exp + 2 * exp_SE
+lower_exp = rmse_exp - 2 * exp_SE
 
-rmse_dsl_sd = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=2)).std(axis=0)
-upper_dsl = rmse_dsl + 2 * rmse_dsl_sd
-lower_dsl = rmse_dsl - 2 * rmse_dsl_sd
+dsl_sd = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=2)).std(axis=0)
+dsl_SE = dsl_sd / np.sqrt(total_reps)
+upper_dsl = rmse_dsl + 2 * dsl_SE
+lower_dsl = rmse_dsl - 2 * dsl_SE
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -48,7 +52,7 @@ print(coeffs_all.shape)
 
 plt.figure()
 plt.xscale('log')
-plt.title(f"Varying the number of total samples (n = {n})")
+plt.title(f"Varying the number of total samples (n = {n}, R = {total_reps})")
 plt.xlabel("Number of total samples (N)")
 plt.ylabel("RMSE w.r.t. gold annotations for all samples")
 
