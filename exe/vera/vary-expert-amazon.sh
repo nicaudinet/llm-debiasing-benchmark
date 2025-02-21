@@ -31,6 +31,6 @@ mkdir -p $plot_dir
 python \
     "$base_dir/lib/vary_expert_realworld.py" \
     $annotated_reviews \
-    "$data_dir/data_amazon_$i.npz"
+    "$data_dir/data_amazon_${SLURM_ARRAY_TASK_ID}.npz"
 
 # python3.12 "$base_dir/lib/vary_expert_plot.py" $data_dir $plot_dir
