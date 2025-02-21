@@ -17,7 +17,7 @@ if [ ! -f $annotated_data_path ]; then
         $annotated_data_path
 fi
 
-for i in $(seq -w 1 2); do
+for i in $(seq -w 1 200); do
     python3.12 \
         "$base_dir/lib/vary_expert_realworld.py" \
         $annotated_data_path \

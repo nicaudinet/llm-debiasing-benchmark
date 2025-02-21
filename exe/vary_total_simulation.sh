@@ -13,7 +13,7 @@ num_expert=(200 1000 5000)
 for n in "${num_expert[@]}"; do
     data_dir_n="$data_dir/n$n"
     mkdir -p $data_dir_n
-    for i in $(seq -w 1 500); do
+    for i in $(seq -w 1 200); do
         echo "Starting run: n=$n i=$i"
         python3.12 \
             "$base_dir/lib/vary_total_simulation.py" \
