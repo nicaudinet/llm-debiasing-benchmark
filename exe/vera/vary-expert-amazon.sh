@@ -11,7 +11,7 @@
 #SBATCH --time=0-00:15:00
 
 #SBATCH --output=/dev/null
-#SBATCH --error=results/logs/error_%A_%a.log
+#SBATCH --error=/dev/null
 
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
