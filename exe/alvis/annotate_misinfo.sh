@@ -27,4 +27,4 @@ BASE_DIR="/cephyr/users/audinet/Vera/"
 python3 \
 	"$BASE_DIR/dsl-use/lib/annotate_misinfo.py" \
 	"$BASE_DIR/datasets/misinfo/data/" \
-	"$BASE_DIR/datasets/misinfo/annotated_reviews.pkl"
+	"$BASE_DIR/datasets/misinfo/annotated.pkl"
