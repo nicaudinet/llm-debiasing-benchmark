@@ -83,6 +83,12 @@ if __name__ == "__main__":
     annotated_data_path = Path(sys.argv[1])
     results_path = Path(sys.argv[2])
 
+    try:
+        seed = np.random.seed(int(sys.argv[3]))
+        print(f"Using seed = {seed}")
+    except Exception:
+        print("The seed was not provided, using current system time")
+
     print("Reading the data")
     data = pd.read_pickle(annotated_data_path)
 

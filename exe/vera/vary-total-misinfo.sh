@@ -35,7 +35,8 @@ for n in "${num_expert[@]}"; do
     mkdir -p $data_dir_n
     python3 \
         "$base_dir/lib/vary_total_realworld.py" \
-	$annotated \
+        "$annotated" \
         "$data_dir_n/data_misinfo_${SLURM_ARRAY_TASK_ID}.npz" \
-        $n
+        "$n" \
+        "${SLURM_ARRAY_TASK_ID}"
 done

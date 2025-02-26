@@ -88,6 +88,12 @@ if __name__ == "__main__":
     results_path = Path(sys.argv[2])
     num_expert_samples = int(sys.argv[3])
 
+    try:
+        seed = np.random.seed(int(sys.argv[4]))
+        print(f"Using seed = {seed}")
+    except Exception:
+        print("The seed was not provided, using current system time")
+
     print("Reading the data")
     data = pd.read_pickle(annotated_data_path)
     assert 10000 <= len(data)

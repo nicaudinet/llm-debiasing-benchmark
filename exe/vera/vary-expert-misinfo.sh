@@ -30,7 +30,8 @@ mkdir -p $plot_dir
 
 python \
     "$base_dir/lib/vary_expert_realworld.py" \
-    $annotated \
-    "$data_dir/data_misinfo_${SLURM_ARRAY_TASK_ID}.npz"
+    "$annotated" \
+    "$data_dir/data_misinfo_${SLURM_ARRAY_TASK_ID}.npz" \
+    "${SLURM_ARRAY_TASK_ID}"
 
 # python3.12 "$base_dir/lib/vary_expert_plot.py" $data_dir $plot_dir
