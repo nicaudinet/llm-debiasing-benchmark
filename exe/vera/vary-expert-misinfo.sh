@@ -12,8 +12,8 @@
 
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
-#SBATCH --output=results/logs/output_%A_%a.log
-#SBATCH --error=results/logs/error_%A_%a.log
+#SBATCH --output=/dev/null
+#SBATCH --error=/dev/null
 
 module purge
 module load rpy2
