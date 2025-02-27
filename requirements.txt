@@ -9,3 +9,4 @@ rpy2
 torch
 transformers
 datasets
+openai
