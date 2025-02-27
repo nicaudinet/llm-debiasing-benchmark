@@ -1,21 +1,44 @@
 from openai import OpenAI
 from pathlib import Path
 import pandas as pd 
-import sys
 from concurrent.futures import ThreadPoolExecutor
+import argparse
 
 ##############
 # Parameters #
 ##############
 
-original_reviews_path = Path(sys.argv[1])
-num_reviews = 5
+parser = argparse.ArgumentParser(
+    description = 'Process original and annotated paths with optional review count.'
+)
+
+parser.add_argument(
+    'original_path',
+    type = Path,
+    help = 'Path to the original file'
+)
+
+parser.add_argument(
+    'annotated_path',
+    type = Path,
+    help='Path to the annotated file'
+)
+
+parser.add_argument(
+    '--num',
+    '-n',
+    type = int,
+    default=5,
+    help='Number of reviews to process (default: 5)'
+)
+
+args = parser.parse_args()
 
 ###########################
 # Parse data to DataFrame #
 ###########################
 
-with open(original_reviews_path, "r") as file:
+with open(args.original_path, "r") as file:
     reviews = file.read().splitlines()
 
 data = {k: [] for k in ["topic", "sentiment", "filename", "text"]}
@@ -27,7 +50,7 @@ for review in reviews:
     data["text"].append(" ".join(words[3:]))
 
 data = pd.DataFrame(data)
-data = data[:num_reviews]
+data = data[:args.num]
 print(data)
 
 ##########
@@ -80,7 +103,7 @@ def call_deepseek(prompt):
     )
     return response.choices[0].message.content
 
-with ThreadPoolExecutor(max_workers=num_reviews) as executor:
+with ThreadPoolExecutor(max_workers=args.num) as executor:
     responses = list(executor.map(call_deepseek, data["prompt"]))
 
 print(responses)
@@ -107,3 +130,6 @@ def parse_annotation(text):
 
 data["annotation"] = list(map(parse_annotation, responses))
 print(data)
+
+data.to_pickle(args.annotated_path)
+print(f"\nSaved data to {args.annotated_path}")
