@@ -21,9 +21,9 @@ module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
 module load Transformers/4.39.3-gfbf-2023a
 module load scikit-learn/1.3.1-gfbf-2023a
 
-BASE_DIR="/cephyr/users/audinet/Vera/"
+BASE_DIR="/cephyr/users/audinet/Vera"
 
 python3 \
 	"$BASE_DIR/dsl-use/lib/annotate_biobias.py" \
-	"$BASE_DIR/datasets/biobias/original.json"
+	"$BASE_DIR/datasets/biobias/original.json" \
 	"$BASE_DIR/datasets/biobias/annotated.pkl"
