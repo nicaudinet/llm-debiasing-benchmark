@@ -46,11 +46,13 @@ print(samples)
 
 print("Gender balance:")
 for gender in samples["gender"].unique():
-    print(f" - {gender}: {len(samples[samples["gender"] == gender])}")
+    num_gender = len(samples[samples["gender"] == gender])
+    print(f" - {gender}: {num_gender}")
 
 print("Profession balance:")
 for profession in samples["profession"].unique():
-    print(f" - {profession}: {len(samples[samples["profession"] == profession])}")
+    num_profession = len(samples[samples["profession"] == profession])
+    print(f" - {profession}: {num_profession}")
 
 ####################
 # Extract features #
