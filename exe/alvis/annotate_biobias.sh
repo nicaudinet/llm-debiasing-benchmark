@@ -25,4 +25,5 @@ BASE_DIR="/cephyr/users/audinet/Vera/"
 
 python3 \
 	"$BASE_DIR/dsl-use/lib/annotate_biobias.py" \
+	"$BASE_DIR/datasets/biobias/original.pkl"
 	"$BASE_DIR/datasets/biobias/annotated.pkl"

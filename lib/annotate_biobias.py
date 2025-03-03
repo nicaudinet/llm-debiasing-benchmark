@@ -1,4 +1,3 @@
-from datasets import load_dataset
 from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
@@ -14,18 +13,14 @@ import torch
 # Paths #
 #########
 
-annotated_data_path = Path(sys.argv[1])
-
-####################
-# Load the dataset #
-####################
-
-data = load_dataset("LabHC/bias_in_bios")
-data = data["train"].to_pandas()
+data_path = Path(sys.argv[1])
+annotated_data_path = Path(sys.argv[2])
 
 #######################
 # Balance the dataset #
 #######################
+
+data = pd.read_pickle(data_path)
 
 labels = data[["profession", "gender"]]
 data["label"] = labels.apply(lambda x: "_".join(x.astype(str)), axis = 1)
