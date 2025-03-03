@@ -7,5 +7,5 @@ data_path = Path(sys.argv[1])
 data = load_dataset("LabHC/bias_in_bios")
 data = data["train"].to_pandas()
 
-data.to_pickle(data_path)
+data.to_json(data_path)
 print(f"\nSaved data to {data_path}")

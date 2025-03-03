@@ -20,7 +20,7 @@ annotated_data_path = Path(sys.argv[2])
 # Balance the dataset #
 #######################
 
-data = pd.read_pickle(data_path)
+data = pd.read_json(data_path)
 
 labels = data[["profession", "gender"]]
 data["label"] = labels.apply(lambda x: "_".join(x.astype(str)), axis = 1)
