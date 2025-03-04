@@ -53,7 +53,7 @@ def simulate(
     # Generate the compute arguments
     num_total_samples = np.logspace(
         start = np.log10(num_expert_samples), # too low = convergence issues
-        stop = np.log10(max_total_samples),
+        stop = np.log10(min(max_total_samples, len(data))),
         num = num_data_points,
         base = 10.0,
     )
@@ -96,7 +96,6 @@ if __name__ == "__main__":
 
     print("Reading the data")
     data = pd.read_pickle(annotated_data_path)
-    assert 10000 <= len(data)
 
     print("Running the experiment")
     num_total_samples, coeffs_all, coeffs_exp, coeffs_dsl = simulate(
