@@ -8,7 +8,7 @@ plot_dir="$result_dir/plots"
 mkdir -p $data_dir
 mkdir -p $plot_dir
 
-for i in $(seq -w 1 200); do
+for i in $(seq -w 1 2); do
     echo "Starting run: i=$i"
     python3.12 \
         "$base_dir/lib/vary_expert_simulation.py" \
