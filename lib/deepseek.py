@@ -4,64 +4,56 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import argparse
 import os
+from itertools import batched
+import time
 
-# TODO: sleep a bit between API calls (avoid throttling)
-#   - try/except error handling
-#   - look into batching
+def parse_args():
 
-##############
-# Parameters #
-##############
+    parser = argparse.ArgumentParser(
+        description = 'Process original and annotated paths with optional review count.'
+    )
 
-parser = argparse.ArgumentParser(
-    description = 'Process original and annotated paths with optional review count.'
-)
+    parser.add_argument(
+        'original_path',
+        type = Path,
+        help = 'Path to the original file'
+    )
 
-parser.add_argument(
-    'original_path',
-    type = Path,
-    help = 'Path to the original file'
-)
+    parser.add_argument(
+        'annotation_path',
+        type = Path,
+        help='Path to the annotations'
+    )
 
-parser.add_argument(
-    'annotation_path',
-    type = Path,
-    help='Path to the annotations'
-)
+    parser.add_argument(
+        '--num',
+        '-n',
+        type = int,
+        default=5,
+        help='Number of reviews to process (default: 5)'
+    )
 
-parser.add_argument(
-    '--num',
-    '-n',
-    type = int,
-    default=5,
-    help='Number of reviews to process (default: 5)'
-)
+    return parser.parse_args()
 
-args = parser.parse_args()
-print(f"Running {args.num} DeepSeek API requests")
+def load_data(path):
+    """
+    Load the Amazon Reviews dataset as a pandas DataFrame
+    """
 
-###########################
-# Parse data to DataFrame #
-###########################
+    with open(path, "r") as file:
+        reviews = file.read().splitlines()
 
-with open(args.original_path, "r") as file:
-    reviews = file.read().splitlines()
+    data = {k: [] for k in ["topic", "sentiment", "filename", "text"]}
+    for review in reviews:
+        words = review.split(" ")
+        data["topic"].append(words[0])
+        data["sentiment"].append(1 if words[1] == "pos" else 0)
+        data["filename"].append(words[2])
+        data["text"].append(" ".join(words[3:]))
 
-data = {k: [] for k in ["topic", "sentiment", "filename", "text"]}
-for review in reviews:
-    words = review.split(" ")
-    data["topic"].append(words[0])
-    data["sentiment"].append(1 if words[1] == "pos" else 0)
-    data["filename"].append(words[2])
-    data["text"].append(" ".join(words[3:]))
-
-data = pd.DataFrame(data)
-data = data[:args.num]
-print(data)
-
-##########
-# Prompt #
-##########
+    data = pd.DataFrame(data)
+    data = data[:args.num]
+    return data
 
 def make_prompt(text):
     return f"""
@@ -85,17 +77,7 @@ Here's the text to classify:
 CLASSIFICATION: 
 """
 
-data["prompt"] = data["text"].apply(make_prompt)
-
-#####################
-# DeepSeek API call #
-#####################
-
-with open(".deepseek_api_key", "r") as file:
-    deepseek_api_key = file.read().strip()
-
-client = OpenAI(api_key=deepseek_api_key, base_url="https://api.deepseek.com")
-def call_deepseek(prompt):
+def call_deepseek(client, prompt):
     response = client.chat.completions.create(
         model="deepseek-chat",
         messages=[
@@ -106,45 +88,45 @@ def call_deepseek(prompt):
     )
     return prompt, response.choices[0].message.content
 
-prompt_path = args.annotation_path / Path("prompts")
-os.makedirs(prompt_path, exist_ok = True)
+def save_prompt(annotation_path, prompt, index):
+    prompt_path = annotation_path / Path("prompts")
+    os.makedirs(prompt_path, exist_ok = True)
+    prompt_file = prompt_path / Path(f"prompt_{index:04}.txt")
+    with open(prompt_file, "w", encoding="utf-8") as file:
+        file.write(prompt)
 
-response_path = args.annotation_path / Path("responses")
-os.makedirs(response_path, exist_ok = True)
+def save_response(annotation_path, response, index):
+    response_path = annotation_path / Path("responses")
+    os.makedirs(response_path, exist_ok = True)
+    response_file = response_path / Path(f"response_{index:04}.txt")
+    with open(response_file, "w", encoding="utf-8") as file:
+        file.write(response)
 
-responses = {}
+def annotate(client, prompts, annotation_path):
 
-with ThreadPoolExecutor(max_workers=args.num) as executor:
+    responses = {}
 
-    futures = {}
+    with ThreadPoolExecutor(max_workers = len(prompts)) as executor:
 
-    for index, prompt in enumerate(data["prompt"]):
-        future = executor.submit(call_deepseek, prompt)
-        futures[future] = index
+        futures = {}
 
-    for future in as_completed(futures):
+        for index, prompt in prompts.items():
+            future = executor.submit(call_deepseek, client, prompt)
+            futures[future] = index
 
-        index = futures[future]
+        for future in as_completed(futures):
+            index = futures[future]
 
-        try:
+            try:
+                prompt, response = future.result()
+                responses[index] = response
+                save_prompt(annotation_path, prompt, index)
+                save_response(annotation_path, response, index)
 
-            prompt, response = future.result()
-            responses[index] = response
+            except Exception as exception:
+                print(f"Prompt {index:04} failed with exception: {exception}") 
 
-            prompt_file = prompt_path / Path(f"prompt_{index:04}.txt")
-            with open(prompt_file, "w", encoding="utf-8") as file:
-                file.write(prompt)
-
-            response_file = response_path / Path(f"response_{index:04}.txt")
-            with open(response_file, "w", encoding="utf-8") as file:
-                file.write(response)
-
-        except Exception as exception:
-            print(f"Prompt {index:04} failed with exception: {exception}") 
-
-######################
-# Parse LLM Response #
-######################
+    return responses
 
 def parse_annotation(text):
     pos_count = text.count("POSITIVE")
@@ -162,23 +144,46 @@ def parse_annotation(text):
     else:
         raise ValueError("Response didn't contain any label")
 
-invalid_responses = {}
-annotations = {}
-for index, response in responses.items():
-    try:
-        annotations[index] = parse_annotation(response)
-    except ValueError as error:
-        invalid_responses[index] = response
-    except Exception as exception:
-        print(f"Some exception occurred when parsing responses: {exception}")
 
-print(f"Responses that failed to parse: {len(invalid_responses)}")
-print(annotations)
 
-data = data.take(list(annotations.keys()))
-data["annotations"] = annotations.values()
-print(data)
+if __name__ == "__main__":
 
-final_path = args.annotation_path / Path("annotations.pkl")
-data.to_pickle(final_path)
-print(f"\nSaved data to {final_path}")
+    args = parse_args()
+    print(f"Running {args.num} DeepSeek API requests")
+
+    data = load_data(args.original_path)
+    print(data)
+
+    data["prompt"] = data["text"].apply(make_prompt)
+
+    with open(".deepseek_api_key", "r") as file:
+        deepseek_api_key = file.read().strip()
+    client = OpenAI(api_key=deepseek_api_key, base_url="https://api.deepseek.com")
+    responses = {}
+    for selection in batched(range(args.num), n = 200):
+        selection = list(selection)
+        print(f"Running batch {selection[0]:04} - {selection[-1]:04}")
+        prompts = {i: data["prompt"][i] for i in selection}
+        responses |= annotate(client, prompts, args.annotation_path)
+        time.sleep(0.5)
+
+    invalid_responses = {}
+    annotations = {}
+    for index, response in responses.items():
+        try:
+            annotations[index] = parse_annotation(response)
+        except ValueError as error:
+            invalid_responses[index] = response
+        except Exception as exception:
+            print(f"Some exception occurred when parsing responses: {exception}")
+
+    print(f"Responses that failed to parse: {len(invalid_responses)}")
+    print(annotations)
+
+    data = data.take(list(annotations.keys()))
+    data["annotations"] = annotations.values()
+    print(data)
+
+    final_path = args.annotation_path / Path("annotations.pkl")
+    data.to_pickle(final_path)
+    print(f"\nSaved data to {final_path}")
