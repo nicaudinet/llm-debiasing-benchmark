@@ -50,7 +50,7 @@ print(coeffs_all.shape)
 
 plt.figure()
 plt.xscale('log')
-plt.title(f"Varying the number of expert samples")
+plt.title(f"Varying the number of expert samples (R = {total_reps})")
 plt.xlabel("Number of expert samples (n)")
 plt.ylabel("RMSE w.r.t. gold annotations for all samples")
 
