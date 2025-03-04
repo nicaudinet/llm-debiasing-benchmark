@@ -11,6 +11,7 @@ scp_plot_expert "simulation"
 scp_plot_expert "amazon"
 scp_plot_expert "misinfo"
 scp_plot_expert "biobias"
+scp_plot_expert "germeval"
 
 function scp_plot_total () {
     DATASET=$1
@@ -23,3 +24,4 @@ scp_plot_total "simulation"
 scp_plot_total "amazon"
 scp_plot_total "misinfo"
 scp_plot_total "biobias"
+scp_plot_total "germeval"

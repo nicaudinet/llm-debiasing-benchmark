@@ -26,6 +26,7 @@ plot_expert "simulation"
 plot_expert "amazon"
 plot_expert "misinfo"
 plot_expert "biobias"
+plot_expert "germeval"
 
 ##########################
 ## Plots for vary total ##
@@ -51,3 +52,4 @@ plot_total "simulation"
 plot_total "amazon"
 plot_total "misinfo"
 plot_total "biobias"
+plot_total "germeval"
