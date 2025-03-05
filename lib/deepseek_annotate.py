@@ -52,7 +52,6 @@ def load_data(path):
         data["text"].append(" ".join(words[3:]))
 
     data = pd.DataFrame(data)
-    data = data[:args.num]
     return data
 
 def make_prompt(text):
@@ -152,6 +151,7 @@ if __name__ == "__main__":
     print(f"Running {args.num} DeepSeek API requests")
 
     data = load_data(args.original_path)
+    data = data[:args.num]
     print(data)
 
     data["prompt"] = data["text"].apply(make_prompt)
@@ -160,7 +160,7 @@ if __name__ == "__main__":
         deepseek_api_key = file.read().strip()
     client = OpenAI(api_key=deepseek_api_key, base_url="https://api.deepseek.com")
     responses = {}
-    for selection in batched(range(args.num), n = 200):
+    for selection in batched(range(len(data)), n = 200):
         selection = list(selection)
         print(f"Running batch {selection[0]:04} - {selection[-1]:04}")
         prompts = {i: data["prompt"][i] for i in selection}

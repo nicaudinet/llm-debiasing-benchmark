@@ -9,3 +9,4 @@ amazon_annotated.pkl
 run-overnight.sh
 .deepseek_api_key
 annotations
+.$pipeline.drawio.bkp
