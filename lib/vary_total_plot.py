@@ -3,48 +3,70 @@ import matplotlib.pyplot as plt
 import os
 from pathlib import Path
 import sys
+from argparse import ArgumentParser
 
-datadir = Path(sys.argv[1])
-plotdir = Path(sys.argv[2])
-n = sys.argv[3]
+###################
+# Parse arguments #
+###################
+
+parser = ArgumentParser()
+parser.add_argument("num_expert", type = int)
+parser.add_argument("results_path", type = Path)
+parser.add_argument("plot_dir", type = Path)
+args = parser.parse_args()
+
+###############
+# Gather data #
+###############
 
 print("Gathering data from files")
 coeffs_all = []
 coeffs_exp = []
 coeffs_dsl = []
-files = [f for f in os.listdir(datadir) if os.path.isfile(datadir / Path(f))]
+coeffs_ppi = []
+
+files = [args.results_path / Path(f) for f in os.listdir(args.results_path)]
+files = [f for f in files if os.path.isfile(f)]
 for file in files:
-    data = np.load(datadir / Path(file))
+    data = np.load(file)
     coeffs_all.append(data["coeffs_all"])
     coeffs_exp.append(data["coeffs_exp"])
     coeffs_dsl.append(data["coeffs_dsl"])
+    coeffs_ppi.append(data["coeffs_ppi"])
+
 coeffs_all = np.stack(coeffs_all, axis=0)
 coeffs_exp = np.stack(coeffs_exp, axis=0)
 coeffs_dsl = np.stack(coeffs_dsl, axis=0)
+coeffs_ppi = np.stack(coeffs_ppi, axis=0)
 
 total_reps = coeffs_all.shape[0]
 print(f"Total files: {total_reps}")
 
 # Assume X-axis (number of expert samples) is the same for all files
-data = np.load(datadir / Path(files[0]))
 X = data["num_total_samples"]
 
+################
+# Compute RMSE #
+################
+
 # Compute RMSE with all
-rmse_exp = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=(0,2)))
-rmse_dsl = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=(0,2)))
+def compute_rmse(coeffs_true, coeffs_pred):
+    assert coeffs_true.shape[0] == coeffs_pred.shape[0]
+    rmse = np.sqrt(np.mean((coeffs_true - coeffs_pred) ** 2, axis=(0,2)))
+    sd = np.sqrt(np.mean((coeffs_true - coeffs_pred) ** 2, axis=2)).std(axis=0)
+    num_repetitions = coeffs_true.shape[0]
+    std_err = sd / np.sqrt(num_repetitions)
+    upper = rmse + 2 * std_err
+    lower = rmse - 2 * std_err
+    return rmse, upper, lower
 
-assert rmse_exp.shape[0] == coeffs_exp.shape[1]
-assert rmse_dsl.shape[0] == coeffs_dsl.shape[1]
+rmse_exp, upper_exp, lower_exp = compute_rmse(coeffs_all, coeffs_exp)
+rmse_dsl, upper_dsl, lower_dsl = compute_rmse(coeffs_all, coeffs_dsl)
+rmse_ppi, upper_ppi, lower_ppi = compute_rmse(coeffs_all, coeffs_ppi)
 
-exp_sd = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=2)).std(axis=0)
-exp_SE = exp_sd / np.sqrt(total_reps)
-upper_exp = rmse_exp + 2 * exp_SE
-lower_exp = rmse_exp - 2 * exp_SE
-
-dsl_sd = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=2)).std(axis=0)
-dsl_SE = dsl_sd / np.sqrt(total_reps)
-upper_dsl = rmse_dsl + 2 * dsl_SE
-lower_dsl = rmse_dsl - 2 * dsl_SE
+#############
+# Plot RMSE #
+#############
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -52,7 +74,7 @@ print(coeffs_all.shape)
 
 plt.figure()
 plt.xscale('log')
-plt.title(f"Varying the number of total samples (n = {n}, R = {total_reps})")
+plt.title(f"Varying the number of total samples (n = {args.num_expert}, R = {total_reps})")
 plt.xlabel("Number of total samples (N)")
 plt.ylabel("RMSE w.r.t. gold annotations for all samples")
 
@@ -76,7 +98,17 @@ plt.fill_between(
 )
 plt.plot(X, rmse_dsl, "o-", color = colors[1], label = "DSL")
 
+plt.fill_between(
+    X,
+    lower_ppi,
+    upper_ppi,
+    color = colors[2],
+    alpha = 0.2,
+    linewidth = 0,
+)
+plt.plot(X, rmse_ppi, "o-", color = colors[2], label = "PPI")
+
 plt.legend()
 
-plt.savefig(plotdir / Path(f"rmse_n{n}.pdf"))
-plt.savefig(plotdir / Path(f"rmse_n{n}.png"))
+plt.savefig(args.plot_dir / Path(f"rmse_n{args.num_expert}.pdf"))
+plt.savefig(args.plot_dir / Path(f"rmse_n{args.num_expert}.png"))
