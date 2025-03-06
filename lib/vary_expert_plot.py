@@ -11,15 +11,18 @@ print("Gathering data from files")
 coeffs_all = []
 coeffs_exp = []
 coeffs_dsl = []
+coeffs_ppi = []
 files = [f for f in os.listdir(datadir) if os.path.isfile(datadir / Path(f))]
 for file in files:
     data = np.load(datadir / Path(file))
     coeffs_all.append(data["coeffs_all"])
     coeffs_exp.append(data["coeffs_exp"])
     coeffs_dsl.append(data["coeffs_dsl"])
+    coeffs_ppi.append(data["coeffs_ppi"])
 coeffs_all = np.stack(coeffs_all, axis=0)
 coeffs_exp = np.stack(coeffs_exp, axis=0)
 coeffs_dsl = np.stack(coeffs_dsl, axis=0)
+coeffs_ppi = np.stack(coeffs_ppi, axis=0)
 total_reps = coeffs_all.shape[0]
 print(f"Total files: {total_reps}")
 
@@ -30,9 +33,11 @@ X = data["num_expert_samples"]
 # Compute RMSE with all
 rmse_exp = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=(0,2)))
 rmse_dsl = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=(0,2)))
+rmse_ppi = np.sqrt(np.mean((coeffs_all - coeffs_ppi) ** 2, axis=(0,2)))
 
 assert rmse_exp.shape[0] == coeffs_exp.shape[1]
 assert rmse_dsl.shape[0] == coeffs_dsl.shape[1]
+assert rmse_ppi.shape[0] == coeffs_ppi.shape[1]
 
 exp_sd = np.sqrt(np.mean((coeffs_all - coeffs_exp) ** 2, axis=2)).std(axis=0)
 exp_SE = exp_sd / np.sqrt(total_reps)
@@ -43,6 +48,11 @@ dsl_sd = np.sqrt(np.mean((coeffs_all - coeffs_dsl) ** 2, axis=2)).std(axis=0)
 dsl_SE = dsl_sd / np.sqrt(total_reps)
 upper_dsl = rmse_dsl + 2 * dsl_SE
 lower_dsl = rmse_dsl - 2 * dsl_SE
+
+ppi_sd = np.sqrt(np.mean((coeffs_all - coeffs_ppi) ** 2, axis=2)).std(axis=0)
+ppi_SE = dsl_sd / np.sqrt(total_reps)
+upper_ppi = rmse_ppi + 2 * ppi_SE
+lower_ppi = rmse_ppi - 2 * ppi_SE
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -73,6 +83,16 @@ plt.fill_between(
     linewidth = 0,
 )
 plt.plot(X, rmse_dsl, "o-", color = colors[1], label = "DSL")
+
+plt.fill_between(
+    X,
+    lower_ppi,
+    upper_ppi,
+    color = colors[2],
+    alpha = 0.2,
+    linewidth = 0,
+)
+plt.plot(X, rmse_ppi, "o-", color = colors[2], label = "PPI")
 
 plt.legend()
 

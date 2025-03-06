@@ -6,7 +6,7 @@ from concurrent.futures import ProcessPoolExecutor
 import os
 import sys
 
-from fitting import fit, fit_dsl
+from fitting import fit, fit_dsl, fit_ppi
 
 def generate(num_samples, prediction_accuracy):
     """
@@ -68,7 +68,8 @@ def compute_coeffs(params: SampleParams):
     coeffs_all = fit(X, Y)
     coeffs_exp = fit(X[selected], Y[selected])
     coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
-    return coeffs_all, coeffs_exp, coeffs_dsl
+    coeffs_ppi = fit_dsl(X, Y, Y_hat, selected)
+    return coeffs_all, coeffs_exp, coeffs_dsl, coeffs_ppi
 
 
 def simulate(
@@ -82,9 +83,12 @@ def simulate(
 
     # Initialise arrays
     size = (num_data_points, num_coefficients)
-    coeffs_all = np.zeros(size)
-    coeffs_exp = np.zeros(size)
-    coeffs_dsl = np.zeros(size)
+    results = {
+        "coeffs_all": np.zeros(size),
+        "coeffs_exp": np.zeros(size),
+        "coeffs_dsl": np.zeros(size),
+        "coeffs_ppi": np.zeros(size),
+    }
 
     # Generate the compute arguments
     num_expert_samples = np.logspace(
@@ -93,6 +97,7 @@ def simulate(
         num = num_data_points,
         base = 10.0,
     )
+    results["num_expert_samples"] = num_expert_samples
     params = []
     for n in np.round(num_expert_samples).astype(int):
         params.append(SampleParams(
@@ -105,11 +110,12 @@ def simulate(
     with ProcessPoolExecutor(max_workers = num_cores) as executor:
         for i, coeffs in enumerate(executor.map(compute_coeffs, params)):
             print(f"Computed data point ({i})")
-            coeffs_all[i,:] = coeffs[0]
-            coeffs_exp[i,:] = coeffs[1]
-            coeffs_dsl[i,:] = coeffs[2]
+            results["coeffs_all"][i,:] = coeffs[0]
+            results["coeffs_exp"][i,:] = coeffs[1]
+            results["coeffs_dsl"][i,:] = coeffs[2]
+            results["coeffs_ppi"][i,:] = coeffs[3]
 
-    return num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl
+    return results
 
 
 if __name__ == "__main__":
@@ -122,7 +128,7 @@ if __name__ == "__main__":
 
     datafile = Path(sys.argv[1])
 
-    num_expert_samples, coeffs_all, coeffs_exp, coeffs_dsl = simulate(
+    results = simulate(
         num_total_samples = 10000,
         num_data_points = 10,
         min_expert_samples = 200,
@@ -132,10 +138,4 @@ if __name__ == "__main__":
     )
 
     print(f"Saving results to {datafile}")
-    np.savez(
-        datafile,
-        num_expert_samples = num_expert_samples,
-        coeffs_all = coeffs_all,
-        coeffs_exp = coeffs_exp,
-        coeffs_dsl = coeffs_dsl
-    )
+    np.savez(datafile, **results)

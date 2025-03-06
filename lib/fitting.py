@@ -4,6 +4,7 @@ import tempfile
 import rpy2.robjects as ro
 from pathlib import Path
 import pandas as pd
+from ppi_py import ppi_logistic_pointestimate
 
 def fit(X, Y):
     """
@@ -72,3 +73,17 @@ def fit_dsl(X, Y_true, Y_pred, selected):
         coeffs = np.array(pd.read_csv(coeff_file)).squeeze()
 
     return coeffs
+
+def fit_ppi(X, Y_true, Y_pred, selected):
+
+    # Add intercept
+    ones = np.ones((X.shape[0], 1))
+    X = np.concatenate([ones, X], axis=1)
+
+    return ppi_logistic_pointestimate(
+        X = X[selected],
+        Y = Y_true[selected],
+        Yhat = Y_pred[selected],
+        X_unlabeled = X[~selected],
+        Yhat_unlabeled = Y_pred[~selected],
+    )
