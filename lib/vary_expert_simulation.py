@@ -5,6 +5,7 @@ from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 import os
 import sys
+from argparse import ArgumentParser
 
 from fitting import fit, fit_dsl, fit_ppi
 
@@ -60,15 +61,16 @@ class SampleParams:
     pq: float
 
 def compute_coeffs(params: SampleParams):
-    """
-    Generate the data and compute the coefficients for the three scenarios
-    """
+
     selected = np.random.choice(params.N, size=params.n, replace=False)
+
     X, Y, Y_hat = generate(params.N, params.pq)
+
     coeffs_all = fit(X, Y)
     coeffs_exp = fit(X[selected], Y[selected])
     coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
-    coeffs_ppi = fit_dsl(X, Y, Y_hat, selected)
+    coeffs_ppi = fit_ppi(X, Y, Y_hat, selected)
+
     return coeffs_all, coeffs_exp, coeffs_dsl, coeffs_ppi
 
 
@@ -81,7 +83,6 @@ def simulate(
         num_cores: int,
     ):
 
-    # Initialise arrays
     size = (num_data_points, num_coefficients)
     results = {
         "coeffs_all": np.zeros(size),
@@ -90,7 +91,6 @@ def simulate(
         "coeffs_ppi": np.zeros(size),
     }
 
-    # Generate the compute arguments
     num_expert_samples = np.logspace(
         start = np.log10(min_expert_samples), # too low = convergence issues
         stop = np.log10(num_total_samples),
@@ -98,6 +98,7 @@ def simulate(
         base = 10.0,
     )
     results["num_expert_samples"] = num_expert_samples
+
     params = []
     for n in np.round(num_expert_samples).astype(int):
         params.append(SampleParams(
@@ -106,7 +107,6 @@ def simulate(
             pq = prediction_accuracy,
         ))
 
-    # Compute the coefficients concurrently 
     with ProcessPoolExecutor(max_workers = num_cores) as executor:
         for i, coeffs in enumerate(executor.map(compute_coeffs, params)):
             print(f"Computed data point ({i})")
@@ -120,13 +120,22 @@ def simulate(
 
 if __name__ == "__main__":
 
+    parser = ArgumentParser()
+    parser.add_argument("results_path", type = Path)
+    parser.add_argument("--seed", type = int)
+    args = parser.parse_args()
+
     if "SLURM_CPUS_ON_NODE" in os.environ:
         num_cores = int(os.environ["SLURM_CPUS_ON_NODE"])
     else:
         num_cores = 11
     print(f"Using {num_cores} cores")
 
-    datafile = Path(sys.argv[1])
+    if args.seed is not None:
+        np.random.seed(args.seed)
+        print(f"Using seed = {args.seed}")
+    else:
+        print("The seed was not provided, using current system time")
 
     results = simulate(
         num_total_samples = 10000,
@@ -137,5 +146,5 @@ if __name__ == "__main__":
         num_cores = num_cores,
     )
 
-    print(f"Saving results to {datafile}")
-    np.savez(datafile, **results)
+    print(f"Saving results to {args.results_path}")
+    np.savez(args.results_path, **results)
