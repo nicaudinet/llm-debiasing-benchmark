@@ -5,59 +5,27 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from transformers import DistilBertTokenizer, DistilBertModel
 import numpy as np
-import os
 import pandas as pd
-import pyarrow.parquet as pq
-import sys
 import torch
+from argparse import ArgumentParser
 
-#########
-# Paths #
-#########
+###################
+# Parse arguments #
+###################
 
-dir_path = Path(sys.argv[1])
-annotated_data_path = Path(sys.argv[2])
+parser = ArgumentParser(
+    description = "Annotate the Amazon dataset"
+)
+parser.add_argument("parsed_path", type = Path)
+parser.add_argument("annotated_path", type = Path)
+args = parser.parse_args()
 
 #############
-# Read data #
+# Load data #
 #############
 
-file_path = dir_path / os.listdir(dir_path)[0]
-schema = pq.read_schema(file_path)
-print(schema)
-
-data = pd.read_parquet(file_path)
-print(data.head())
-print(f"Total samples: {len(data)}")
-
-sources = {s: len(data[data["source"] == s]) for s in data["source"].unique()}
-sources = sorted(sources.items(), key = lambda x: x[1], reverse = True)
-print("Top 10 sources")
-for s in sources[:10]:
-    print(f" - {s[0]}: {s[1]}")
-
-# Filter data to only two balanced classes
-thesun = data[data["source"] == "thesun"]
-theguardianuk = data[data["source"] == "theguardianuk"]
-n_class = min(len(thesun), len(theguardianuk))
-thesun = thesun.sample(n = n_class)
-theguardianuk = theguardianuk.sample(n = n_class)
-data = pd.concat([thesun, theguardianuk])
-print(f"Filtered data samples: {len(data)}")
-
-#################
-# Make features #
-#################
-
-original_columns = list(data.columns.values)
-
-data["x1"] = data["content"].map(lambda x: len(x))
-data["x2"] = data["content"].map(lambda x: len(x.split(" ")))
-data["x3"] = data["content"].map(lambda x: sum(1 for c in x if c.isupper()))
-data["x4"] = data["title"].map(lambda x: len(x))
-
-source_map = {"thesun": 0, "theguardianuk": 1}
-data["y"] = data["source"].map(lambda x: source_map[x])
+data = pd.read_json(args.parsed_path)
+print(data)
 
 #################
 # Test features #
@@ -100,11 +68,11 @@ def embed(texts, batch_size = 32):
         embeddings.extend(batch_embeddings)
     return embeddings
 
-embeddings = embed(list(data["content"]))
+embeddings = embed(list(data["text"]))
 X = np.array(embeddings)
 print(f"Embedding dimensions: {X.shape}")
 Y = data["y"].to_numpy()
-logreg = LogisticRegression()
+logreg = LogisticRegression(max_iter=1000)
 logreg.fit(X, Y)
 data["y_hat"] = logreg.predict(X)
 
@@ -112,9 +80,8 @@ data["y_hat"] = logreg.predict(X)
 # Save data #
 #############
 
-data = data.drop(columns = original_columns)
 print("\nFinal data:")
-print(data.head())
+print(data)
 
-data.to_pickle(annotated_data_path)
-print(f"\nSaved data to {annotated_data_path}")
+data.to_json(args.annotated_path)
+print(f"\nSaved data to {args.annotated_path}")
