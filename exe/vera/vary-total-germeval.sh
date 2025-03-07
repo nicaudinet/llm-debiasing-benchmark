@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=12
-#SBATCH --array=1-500
+#SBATCH --array=1-10
 #SBATCH --time=0-00:30:00
 
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
@@ -19,24 +19,22 @@ module purge
 module load rpy2
 module load scikit-learn/1.4.2-gfbf-2023a
 
-annotated="/cephyr/users/audinet/Vera/datasets/germeval/annotated.pkl"
-base_dir="/cephyr/users/audinet/Vera/dsl-use"
-result_dir="$base_dir/results/vary-num-total/germeval"
-data_dir="$result_dir/data"
-plot_dir="$result_dir/plot"
+source venv/bin/activate
 
-mkdir -p $data_dir
-mkdir -p $plot_dir
+BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
+MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
+DATA_DIR="$MIMER_PATH/experiments/vary-num-total/germeval/data"
+
+mkdir -p $DATA_DIR
 
 echo "Experiment: vary number of total samples (simulation)"
-num_expert=(200 1000 5000)
+num_expert=(200) # 1000 5000)
 for n in "${num_expert[@]}"; do
-    data_dir_n="$data_dir/n$n"
-    mkdir -p $data_dir_n
-    python3 \
-        "$base_dir/lib/vary_total_realworld.py" \
-        "$annotated" \
-        "$data_dir_n/data_germeval_${SLURM_ARRAY_TASK_ID}.npz" \
+    DATA_DIR_N="$DATA_DIR/n$n"
+    mkdir -p $DATA_DIR_N
+    python3 "$BASE_DIR/lib/vary_total_realworld.py" \
         "$n" \
-        "${SLURM_ARRAY_TASK_ID}"
+	    "$MIMER_PATH/annotations/germeval/annotated_bert.json" \
+        "$DATA_DIR_N/data_germeval_${SLURM_ARRAY_TASK_ID}.npz" \
+        --seed "${SLURM_ARRAY_TASK_ID}"
 done
