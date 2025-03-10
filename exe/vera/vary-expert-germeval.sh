@@ -23,11 +23,11 @@ source venv/bin/activate
 
 BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
 MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
-DATA_DIR="$MIMER_PATH/experiments/vary-num-expert/germeval/data"
+DATA_DIR="$MIMER_PATH/experiments/vary-num-expert/germeval/data_deepseek"
 
 mkdir -p $DATA_DIR
 
 python "$BASE_DIR/lib/vary_expert_realworld.py" \
-    "$MIMER_PATH/annotations/germeval/annotated_bert.json" \
+    "$MIMER_PATH/annotations/germeval/annotated_deepseek.json" \
     "$DATA_DIR/data_germeval_${SLURM_ARRAY_TASK_ID}.npz" \
     --seed "${SLURM_ARRAY_TASK_ID}"

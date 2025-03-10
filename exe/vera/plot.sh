@@ -12,10 +12,10 @@ module load matplotlib/3.7.2-gfbf-2023a
 
 function plot_expert () {
     local DATASET=$1
-    DATA_DIR="$BASE_DIR/vary-num-expert/$DATASET/data"
+    DATA_DIR="$BASE_DIR/vary-num-expert/$DATASET/data_deepseek"
     if [ -d $DATA_DIR ]; then
         echo -e "\nVary expert ($DATASET)"
-        PLOT_DIR="$BASE_DIR/vary-num-expert/$DATASET/plot"
+        PLOT_DIR="$BASE_DIR/vary-num-expert/$DATASET/plot_deepseek"
         mkdir -p $PLOT_DIR
         python "$HOME_DIR/lib/vary_expert_plot.py" $DATA_DIR $PLOT_DIR
     else
@@ -35,12 +35,12 @@ plot_expert "germeval"
 
 function plot_total () {
     local DATASET=$1
-    DATA_DIR="$BASE_DIR/vary-num-total/$DATASET/data"
+    DATA_DIR="$BASE_DIR/vary-num-total/$DATASET/data_deepseek"
     if [ -d $DATA_DIR ]; then
         for n in 200 1000 5000; do
         echo -e "\nVary total n$n ($DATASET)"
         DATA_DIR_N="$DATA_DIR/n$n"
-            PLOT_DIR="$BASE_DIR/vary-num-total/$DATASET/plot"
+            PLOT_DIR="$BASE_DIR/vary-num-total/$DATASET/plot_deepseek"
             mkdir -p $PLOT_DIR
             python "$HOME_DIR/lib/vary_total_plot.py" $n $DATA_DIR_N $PLOT_DIR
         done

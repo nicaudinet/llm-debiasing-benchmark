@@ -23,7 +23,7 @@ source venv/bin/activate
 
 BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
 MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
-DATA_DIR="$MIMER_PATH/experiments/vary-num-total/misinfo/data"
+DATA_DIR="$MIMER_PATH/experiments/vary-num-total/misinfo/data_deepseek"
 
 mkdir -p $DATA_DIR
 
@@ -34,7 +34,7 @@ for n in "${num_expert[@]}"; do
     mkdir -p $DATA_DIR_N
     python3 "$BASE_DIR/lib/vary_total_realworld.py" \
         "$n" \
-	    "$MIMER_PATH/annotations/misinfo/annotated_bert.json" \
+	    "$MIMER_PATH/annotations/misinfo/annotated_deepseek.json" \
         "$DATA_DIR_N/data_misinfo_${SLURM_ARRAY_TASK_ID}.npz" \
         --seed "${SLURM_ARRAY_TASK_ID}"
 done
