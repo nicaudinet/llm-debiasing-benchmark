@@ -19,23 +19,22 @@ module purge
 module load rpy2
 module load scikit-learn/1.4.2-gfbf-2023a
 
-annotated_reviews="/cephyr/users/audinet/Vera/datasets/amazon/annotated_reviews.pkl"
-base_dir="/cephyr/users/audinet/Vera/dsl-use"
-result_dir="$base_dir/results/vary-num-total/amazon"
-data_dir="$result_dir/data"
-plot_dir="$result_dir/plots"
+source venv/bin/activate
 
-mkdir -p $data_dir
-mkdir -p $plot_dir
+BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
+MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
+DATA_DIR="$MIMER_PATH/experiments/vary-num-total/amazon/data_deepseek"
 
-echo "Experiment: vary number of total samples (simulation)"
+mkdir -p $DATA_DIR
+
+echo "Experiment: vary number of total samples"
 num_expert=(200 1000 5000)
 for n in "${num_expert[@]}"; do
-    data_dir_n="$data_dir/n$n"
-    mkdir -p $data_dir_n
-    python3 \
-        "$base_dir/lib/vary_total_realworld.py" \
-	$annotated_reviews \
-        "$data_dir_n/data_amazon_${SLURM_ARRAY_TASK_ID}.npz" \
-        $n
+    DATA_DIR_N="$DATA_DIR/n$n"
+    mkdir -p $DATA_DIR_N
+    python3 "$BASE_DIR/lib/vary_total_realworld.py" \
+        "$n" \
+	    "$MIMER_PATH/annotations/amazon/annotated_deepseek.json" \
+        "$DATA_DIR_N/data_amazon_${SLURM_ARRAY_TASK_ID}.npz" \
+        --seed "${SLURM_ARRAY_TASK_ID}"
 done

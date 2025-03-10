@@ -19,16 +19,11 @@ module purge
 module load rpy2
 module load scikit-learn/1.4.2-gfbf-2023a
 
-base_dir="/cephyr/users/audinet/Vera/dsl-use"
-result_dir="$base_dir/results/vary-num-expert/simulation"
-data_dir="$result_dir/data"
-plot_dir="$result_dir/plots"
+source venv/bin/activate
 
-mkdir -p $data_dir
-mkdir -p $plot_dir
+DATA_DIR="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/experiments/vary-num-expert/simulation/data"
 
-python \
-    "$base_dir/lib/vary_expert_simulation.py" \
-    "$data_dir/data_simulation_${SLURM_ARRAY_TASK_ID}.npz"
+mkdir -p $DATA_DIR
 
-# python3.12 "$base_dir/lib/vary_expert_plot.py" $data_dir $plot_dir
+python "/cephyr/users/audinet/Vera/dsl-use/lib/vary_expert_simulation.py" \
+    "$DATA_DIR/data_simulation_${SLURM_ARRAY_TASK_ID}.npz"

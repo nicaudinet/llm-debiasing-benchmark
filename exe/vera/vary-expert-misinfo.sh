@@ -19,19 +19,15 @@ module purge
 module load rpy2
 module load scikit-learn/1.4.2-gfbf-2023a
 
-annotated="/cephyr/users/audinet/Vera/datasets/misinfo/annotated.pkl"
-base_dir="/cephyr/users/audinet/Vera/dsl-use"
-result_dir="$base_dir/results/vary-num-expert/misinfo"
-data_dir="$result_dir/data"
-plot_dir="$result_dir/plots"
+source venv/bin/activate
 
-mkdir -p $data_dir
-mkdir -p $plot_dir
+BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
+MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
+DATA_DIR="$MIMER_PATH/experiments/vary-num-expert/misinfo/data_deepseek"
 
-python \
-    "$base_dir/lib/vary_expert_realworld.py" \
-    "$annotated" \
-    "$data_dir/data_misinfo_${SLURM_ARRAY_TASK_ID}.npz" \
-    "${SLURM_ARRAY_TASK_ID}"
+mkdir -p $DATA_DIR
 
-# python3.12 "$base_dir/lib/vary_expert_plot.py" $data_dir $plot_dir
+python "$BASE_DIR/lib/vary_expert_realworld.py" \
+    "$MIMER_PATH/annotations/misinfo/annotated_deepseek.json" \
+    "$DATA_DIR/data_misinfo_${SLURM_ARRAY_TASK_ID}.npz" \
+    --seed "${SLURM_ARRAY_TASK_ID}"
