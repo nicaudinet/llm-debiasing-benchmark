@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=12
-#SBATCH --array=1-10
+#SBATCH --array=1-500
 #SBATCH --time=0-00:30:00
 
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
@@ -28,7 +28,7 @@ DATA_DIR="$MIMER_PATH/experiments/vary-num-total/germeval/data"
 mkdir -p $DATA_DIR
 
 echo "Experiment: vary number of total samples (simulation)"
-num_expert=(200) # 1000 5000)
+num_expert=(200 1000 5000)
 for n in "${num_expert[@]}"; do
     DATA_DIR_N="$DATA_DIR/n$n"
     mkdir -p $DATA_DIR_N
