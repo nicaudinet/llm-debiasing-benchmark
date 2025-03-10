@@ -5,6 +5,7 @@ import os
 from sklearn.metrics import cohen_kappa_score
 
 def parse_annotation(text, labels):
+    # Assumes that labels are not subsets of each other...
     counts = {i: text.count(label) for i, label in enumerate(labels)}
     if 1 < sum(1 for n in counts.values() if n > 0):
         raise ValueError("Response contains more than one label")
@@ -14,6 +15,20 @@ def parse_annotation(text, labels):
         raise ValueError("Response didn't contain any label")
     else:
         return [k for k, v in counts.items() if v > 0][0]
+
+def parse_biobias(text):
+    male_count = text.count("MALE")
+    female_count = text.count("FEMALE")
+    if 0 < female_count and female_count < male_count:
+        raise ValueError("Response contains both labels")
+    elif 1 < male_count:
+        raise ValueError("Response contains multiple copies of a label")
+    elif 0 == female_count + male_count:
+        raise ValueError("Response contains no labels")
+    elif 1 == female_count:
+        return 1
+    elif 1 == male_count:
+        return 0
 
 if __name__ == "__main__":
 
@@ -52,7 +67,10 @@ if __name__ == "__main__":
     labels = dataset_labels[args.dataset]
     for index, response in responses.items():
         try:
-            annotations[index] = parse_annotation(response, labels)
+            if args.dataset == "biobias":
+                annotations[index] = parse_biobias(response)
+            else:
+                annotations[index] = parse_annotation(response, labels)
         except ValueError as error:
             print(f"Value error at index {index}: {error}")
             print("- Response:", response)
