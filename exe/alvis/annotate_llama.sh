@@ -16,10 +16,10 @@
 #SBATCH --mail-type=all
 
 module purge
-module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
-module load Transformers/4.39.3-gfbf-2023a
-module load scikit-learn/1.3.1-gfbf-2023a
+module load Python/3.12.3-GCCcore-13.3.0
 
-BASE_DIR="/cephyr/users/audinet/Vera/"
+source /mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/venv_alvis/bin/activate
+
+BASE_DIR="/cephyr/users/audinet/Alvis"
 
 python3 "$BASE_DIR/dsl-use/lib/annotate_llama.py"
