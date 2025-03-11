@@ -35,13 +35,11 @@ print("Using device:", device)
 data = pd.read_json(args.parsed_path)
 data = data[:args.num]
 data = data.reset_index(drop = True)
+print(data)
 
 ############
 # Annotate #
 ############
-
-data["prompt"] = data["text"].apply(lambda x: make_user_prompt(args.dataset, x))
-print(data)
 
 print(f"Loading tokenizer for {args.model}")
 tokenizer = AutoTokenizer.from_pretrained(args.model)
@@ -74,7 +72,8 @@ def make_chat(text):
     ]
 
 for batch in batched(range(len(data)), args.batchsize):
-    chats = [make_chat(text) for text in data["text"][batch]]
+    texts = [data["text"][i] for i in batch]
+    chats = [make_chat(text) for text in texts]
     outputs = generator(chats)
     print(outputs)
     with open("outputs.txt", "r", encoding = "utf-8") as file:
