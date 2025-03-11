@@ -71,24 +71,23 @@ def make_chat(text):
         },
     ]
 
+prompt_dir = args.annotation_path / Path("prompts")
+response_dir = args.annotation_path / Path("responses")
+
+os.makedirs(prompt_dir, exist_ok = True)
+os.makedirs(response_dir, exist_ok = True)
+
 for batch in batched(range(len(data)), args.batchsize):
     texts = [data["text"][i] for i in batch]
     chats = [make_chat(text) for text in texts]
     outputs = generator(chats)
-    print(outputs)
-    with open("outputs.txt", "r", encoding = "utf-8") as file:
-        file.write(str(outputs))
 
-def save_prompt(annotation_path, prompt, index):
-    prompt_path = annotation_path / Path("prompts")
-    os.makedirs(prompt_path, exist_ok = True)
-    prompt_file = prompt_path / Path(f"prompt_{index:04}.txt")
-    with open(prompt_file, "w", encoding="utf-8") as file:
-        file.write(prompt)
+    for i, output in zip(batch, outputs):
 
-def save_response(annotation_path, response, index):
-    response_path = annotation_path / Path("responses")
-    os.makedirs(response_path, exist_ok = True)
-    response_file = response_path / Path(f"response_{index:04}.txt")
-    with open(response_file, "w", encoding="utf-8") as file:
-        file.write(response)
+        prompt_file = prompt_dir / Path(f"prompt_{i:04}.txt")
+        with open(prompt_file, "w", encoding="utf-8") as file:
+            file.write(output["generated_text"][-2]["content"])
+
+        response_file = response_dir / Path(f"response_{i:04}.txt")
+        with open(response_file, "w", encoding="utf-8") as file:
+            file.write(output["generated_text"][-1]["content"])
