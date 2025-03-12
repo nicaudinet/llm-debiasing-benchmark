@@ -16,7 +16,9 @@ parser.add_argument('dataset', choices = list(system_prompts.keys()))
 parser.add_argument('parsed_path', type = Path)
 parser.add_argument('annotation_dir', type = Path)
 parser.add_argument('--num', type = int, default = 5)
-parser.add_argument('--model', type = str, default = "meta-llama/Llama-3.2-3B-Instruct")
+# parser.add_argument('--model', type = str, default = "meta-llama/Llama-3.2-3B-Instruct")
+# parser.add_argument('--model', type = str, default = "meta-llama/Llama-3.3-70B-Instruct")
+parser.add_argument('--model', type = str, default = "microsoft/phi-4")
 parser.add_argument('--batchsize', type = int, default = 8)
 args = parser.parse_args()
 print(f"Running {args.num} DeepSeek API requests")
@@ -71,8 +73,8 @@ def make_chat(text):
         },
     ]
 
-prompt_dir = args.annotation_path / Path("prompts")
-response_dir = args.annotation_path / Path("responses")
+prompt_dir = args.annotation_dir / Path("prompts")
+response_dir = args.annotation_dir / Path("responses")
 
 os.makedirs(prompt_dir, exist_ok = True)
 os.makedirs(response_dir, exist_ok = True)
@@ -84,10 +86,12 @@ for batch in batched(range(len(data)), args.batchsize):
 
     for i, output in zip(batch, outputs):
 
+        # print(output)
+
         prompt_file = prompt_dir / Path(f"prompt_{i:04}.txt")
         with open(prompt_file, "w", encoding="utf-8") as file:
-            file.write(output["generated_text"][-2]["content"])
+            file.write(output[0]["generated_text"][-2]["content"])
 
         response_file = response_dir / Path(f"response_{i:04}.txt")
         with open(response_file, "w", encoding="utf-8") as file:
-            file.write(output["generated_text"][-1]["content"])
+            file.write(output[0]["generated_text"][-1]["content"])

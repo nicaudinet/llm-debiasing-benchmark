@@ -22,13 +22,11 @@ source /mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/venv_alvis/bin/activate
 
 BASE_DIR="/cephyr/users/audinet/Alvis/dsl-use"
 MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
-ANN_DIR="$MIMER_PATH/annotations/amazon/phi4"
+ANN_DIR="$MIMER_PATH/annotations/amazon/llama"
 
 mkdir -p $ANN_DIR
 
 python3 "$BASE_DIR/lib/annotate_llama.py" \
 	"amazon" \
 	"$MIMER_PATH/annotations/amazon/parsed.json" \
-	"$ANN_DIR" \
-	--model "microsoft/phi-4" \
-	--num 10000
+	"$ANN_DIR"
