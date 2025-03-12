@@ -16,6 +16,7 @@ parser.add_argument('dataset', choices = list(system_prompts.keys()))
 parser.add_argument('parsed_path', type = Path)
 parser.add_argument('annotation_dir', type = Path)
 parser.add_argument('--num', type = int, default = 5)
+parser.add_argument('--start', type = int, default = 0)
 parser.add_argument('--model', type = str, default = "microsoft/phi-4")
 parser.add_argument('--batchsize', type = int, default = 8)
 args = parser.parse_args()
@@ -33,7 +34,7 @@ print("Using device:", device)
 #################
 
 data = pd.read_json(args.parsed_path)
-data = data[:args.num]
+data = data[args.start:args.num]
 data = data.reset_index(drop = True)
 print(data)
 
@@ -83,8 +84,6 @@ for batch in batched(range(len(data)), args.batchsize):
     outputs = generator(chats)
 
     for i, output in zip(batch, outputs):
-
-        # print(output)
 
         prompt_file = prompt_dir / Path(f"prompt_{i:04}.txt")
         with open(prompt_file, "w", encoding="utf-8") as file:
