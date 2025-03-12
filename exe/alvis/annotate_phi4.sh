@@ -15,6 +15,13 @@
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
 
+if [ $# -eq 0 ]; then
+    echo "Error: dataset argument missing"
+    exit 1
+fi
+
+DATASET=$1
+
 module purge
 module load Python/3.12.3-GCCcore-13.3.0
 
@@ -22,11 +29,13 @@ source /mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/venv_alvis/bin/activate
 
 BASE_DIR="/cephyr/users/audinet/Alvis/dsl-use"
 MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
-ANN_DIR="$MIMER_PATH/annotations/amazon/llama"
+ANN_DIR="$MIMER_PATH/annotations/$DATASET/phi4"
 
 mkdir -p $ANN_DIR
 
-python3 "$BASE_DIR/lib/annotate_llama.py" \
-	"amazon" \
-	"$MIMER_PATH/annotations/amazon/parsed.json" \
-	"$ANN_DIR"
+python3 "$BASE_DIR/lib/annotate_alvis.py" \
+	"$DATASET" \
+	"$MIMER_PATH/annotations/$DATASET/parsed.json" \
+	"$ANN_DIR" \
+	--model "microsoft/phi-4" \
+	--num 10000
