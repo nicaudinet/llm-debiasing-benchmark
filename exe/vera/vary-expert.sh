@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=vary-expert-biobias
+#SBATCH --job-name=vary-expert-amazon
 #SBATCH --account=C3SE2025-1-14
 #SBATCH --partition=vera
 
@@ -10,10 +10,11 @@
 #SBATCH --array=1-500
 #SBATCH --time=0-00:15:00
 
-#SBATCH --mail-user=nicolas.audinet@chalmers.se
-#SBATCH --mail-type=all
 #SBATCH --output=/dev/null
 #SBATCH --error=/dev/null
+
+#SBATCH --mail-user=nicolas.audinet@chalmers.se
+#SBATCH --mail-type=all
 
 module purge
 module load rpy2
@@ -21,13 +22,16 @@ module load scikit-learn/1.4.2-gfbf-2023a
 
 source venv/bin/activate
 
+ANNOTATION=$1
+DATASET=$2
+
 BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
 MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
-DATA_DIR="$MIMER_PATH/experiments/vary-num-expert/biobias/data_deepseek"
+DATA_DIR="$MIMER_PATH/experiments/vary-num-expert/$DATASET/data/$ANNOTATION"
 
 mkdir -p $DATA_DIR
 
 python "$BASE_DIR/lib/vary_expert_realworld.py" \
-    "$MIMER_PATH/annotations/biobias/annotated_deepseek.json" \
-    "$DATA_DIR/data_biobias_${SLURM_ARRAY_TASK_ID}.npz" \
+    "$MIMER_PATH/annotations/$DATASET/annotated_$ANNOTATION.json" \
+    "$DATA_DIR/data_$DATASET_${SLURM_ARRAY_TASK_ID}.npz" \
     --seed "${SLURM_ARRAY_TASK_ID}"
