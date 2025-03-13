@@ -16,14 +16,16 @@
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
 
+set -eo pipefail
+
+ANNOTATION=$1
+DATASET=$2
+
 module purge
 module load rpy2
 module load scikit-learn/1.4.2-gfbf-2023a
 
 source venv/bin/activate
-
-ANNOTATION=$1
-DATASET=$2
 
 BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
 MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
