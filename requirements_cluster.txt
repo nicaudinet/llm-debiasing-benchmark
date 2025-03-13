@@ -2,3 +2,4 @@ transformers
 accelerate
 torch
 pandas
+scikit-learn
