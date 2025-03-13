@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -eo pipefail
+
+echo ""
+echo "##########"
+echo "# Gather #"
+echo "##########"
+echo ""
+
+MIMER="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/annotations"
+
+function gather () {
+
+    local DATASET=$1
+    local ANN_DIR="$MIMER/$DATASET"
+
+    mkdir -p "$ANN_DIR/phi4"
+
+    echo ""
+    echo "Gathering responses for $DATASET"
+    echo ""
+
+    python3 lib/gather_responses.py \
+        "$DATASET" \
+        "$ANN_DIR/parsed.json" \
+        "$ANN_DIR/phi4" \
+        "$ANN_DIR/annotated_phi4.json"
+}
+
+gather "amazon"
+gather "misinfo"
+gather "biobias"
+gather "germeval"
