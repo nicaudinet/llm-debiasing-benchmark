@@ -5,22 +5,26 @@ system_prompts = {
     "germeval": "You are a perfect German tweet classification system",
 }
 
-def amazon_prompt(text):
+def amazon_prompt(text, examples):
     return f"""
-Classify the following text as either POSITIVE or NEGATIVE. Give no other
-explanation for your classification, only output the label.
+Classify the following review as either:
+- POSITIVE if the review indicates an overall positive sentiment
+- NEGATIVE if the review indicates an overall negative sentiment
 
-Here are a few examples:
+Give no other explanation for your classification, only output the label.
 
-I love you
+Here are two examples of the formatting I would like you use, where <
+REVIEW_TEXT > is a stand-in for the article text:
+
+< REVIEW_TEXT >
 
 CLASSIFICATION: POSITIVE
 
-I hate you
+< REVIEW_TEXT >
 
 CLASSIFICATION: NEGATIVE
 
-Here's the text to classify:
+Here's the review to classify:
 
 {text}
 
@@ -37,8 +41,8 @@ Classify the following article as either:
 
 Give no other explanation for your classification, only output the label.
 
-Here's an example of the formatting I would like you use, where < ARTICLE_TEXT >
-is a stand-in for the article text:
+Here are two examples of the formatting I would like you use, where <
+ARTICLE_TEXT > is a stand-in for the article text:
 
 < ARTICLE_TEXT >
 
@@ -46,7 +50,7 @@ CLASSIFICATION: THESUN
 
 < ARTICLE_TEXT >
 
-CLASSIFICATION: THESUN
+CLASSIFICATION: THEGUARDIAN
 
 Here's the article I would like you to classify:
 
@@ -63,14 +67,14 @@ Classify the following textual biographies as either:
 
 Give no other explanation for your classification, only output the label.
 
-Here are a couple example of the formatting I would like you use, where < BIOGRAPHY >
+Here are two examples of the formatting I would like you use, where < BIOGRAPHY_TEXT >
 is a stand-in for the textual biography:
 
-< BIOGRAPHY >
+< BIOGRAPHY_TEXT >
 
 CLASSIFICATION: MALE
 
-< BIOGRAPHY >
+< BIOGRAPHY_TEXT >
 
 CLASSIFICATION: FEMALE
 
@@ -89,14 +93,14 @@ Classify the following German tweets as either:
 
 Give no other explanation for your classification, only output the label.
 
-Here are a couple example of the formatting I would like you use, where < TWEET >
+Here are two examples of the formatting I would like you use, where < TWEET_TEXT >
 is a stand-in for the text of the tweet:
 
-< TWEET >
+< TWEET_TEXT >
 
 CLASSIFICATION: OFFENSIVE
 
-< BIOGRAPHY >
+< BIOGRAPHY_TEXT >
 
 CLASSIFICATION: OTHER
 
