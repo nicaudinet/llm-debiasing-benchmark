@@ -33,5 +33,5 @@ mkdir -p $DATA_DIR
 
 python "$BASE_DIR/lib/vary_expert_realworld.py" \
     "$MIMER_PATH/annotations/$DATASET/annotated_$ANNOTATION.json" \
-    "$DATA_DIR/data_$DATASET_${SLURM_ARRAY_TASK_ID}.npz" \
+    "$DATA_DIR/data_${SLURM_ARRAY_TASK_ID}.npz" \
     --seed "${SLURM_ARRAY_TASK_ID}"
