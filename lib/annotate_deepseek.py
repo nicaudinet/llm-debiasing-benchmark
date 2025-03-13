@@ -80,7 +80,7 @@ if __name__ == "__main__":
     data = pd.read_json(args.parsed_path)
     data = data[:args.num]
     data = data.reset_index(drop = True)
-    data["prompt"] = data["text"].apply(lambda x: make_user_prompt(args.dataset, x))
+    data["prompt"] = data["text"].apply(lambda x: make_user_prompt(args.dataset, x, None))
     print(data)
 
     with open(".deepseek_api_key", "r") as file:

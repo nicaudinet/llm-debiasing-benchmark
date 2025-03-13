@@ -68,7 +68,7 @@ def make_chat(text):
         },
         {
             "role": "user",
-            "content": make_user_prompt(args.dataset, text),
+            "content": make_user_prompt(args.dataset, text, None),
         },
     ]
 

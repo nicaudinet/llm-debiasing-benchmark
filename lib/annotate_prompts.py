@@ -5,6 +5,24 @@ system_prompts = {
     "germeval": "You are a perfect German tweet classification system",
 }
 
+def make_examples(examples):
+    if examples == None:
+        return ""
+    else:
+        lines = [
+            "---",
+            "",
+            "Here is a set of examples for the task:",
+            "",
+        ]
+        for review, label in examples:
+            lines.append(review)
+            lines.append("")
+            lines.append("CLASSIFICATION: " + label)
+            lines.append("")
+        lines.append("---")
+        return "\n".join(lines)
+
 def amazon_prompt(text, examples):
     return f"""
 Classify the following review as either:
@@ -24,6 +42,8 @@ CLASSIFICATION: POSITIVE
 
 CLASSIFICATION: NEGATIVE
 
+{make_examples(examples)}
+
 Here's the review to classify:
 
 {text}
@@ -31,7 +51,7 @@ Here's the review to classify:
 CLASSIFICATION: 
 """
 
-def misinfo_prompt(text):
+def misinfo_prompt(text, examples):
     return f"""
 Classify the following article as either:
 - THESUN if it is likely to have been published in the British tabloid newspaper
@@ -52,6 +72,8 @@ CLASSIFICATION: THESUN
 
 CLASSIFICATION: THEGUARDIAN
 
+{make_examples(examples)}
+
 Here's the article I would like you to classify:
 
 {text}
@@ -59,7 +81,7 @@ Here's the article I would like you to classify:
 CLASSIFICATION: 
 """
 
-def biobias_prompt(text):
+def biobias_prompt(text, examples):
     return f"""
 Classify the following textual biographies as either:
 - MALE if the subject is likely to be male
@@ -78,6 +100,8 @@ CLASSIFICATION: MALE
 
 CLASSIFICATION: FEMALE
 
+{make_examples(examples)}
+
 Here's the textual biography I would like you to classify:
 
 {text}
@@ -85,7 +109,7 @@ Here's the textual biography I would like you to classify:
 CLASSIFICATION: 
 """
 
-def germeval_prompt(text):
+def germeval_prompt(text, examples):
     return f"""
 Classify the following German tweets as either:
 - OFFENSIVE if the tweet is likely to contain an offense or be offensive
@@ -104,6 +128,8 @@ CLASSIFICATION: OFFENSIVE
 
 CLASSIFICATION: OTHER
 
+{make_examples(examples)}
+
 Here's the German tweet I would like you to classify:
 
 {text}
@@ -111,14 +137,26 @@ Here's the German tweet I would like you to classify:
 CLASSIFICATION: 
 """
 
-def make_user_prompt(dataset, text):
+def make_user_prompt(dataset, text, examples):
     if dataset == "amazon":
-        return amazon_prompt(text)
+        return amazon_prompt(text, examples)
     elif dataset == "misinfo":
-        return misinfo_prompt(text)
+        return misinfo_prompt(text, examples)
     elif dataset == "biobias":
-        return biobias_prompt(text)
+        return biobias_prompt(text, examples)
     elif dataset == "germeval":
-        return germeval_prompt(text)
+        return germeval_prompt(text, examples)
     else:
         raise ValueError(f"'{dataset}' is not one of the known datasets.")
+
+if __name__ == "__main__":
+
+    examples = [
+        ("I love you", "POSITIVE"),
+        ("I hate you", "NEGATIVE"),
+    ]
+
+    print(amazon_prompt("I kind of like you", examples))
+    print(misinfo_prompt("I kind of like you", examples))
+    print(biobias_prompt("I kind of like you", examples))
+    print(germeval_prompt("I kind of like you", examples))
