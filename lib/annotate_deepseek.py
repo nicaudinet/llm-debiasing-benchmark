@@ -6,7 +6,7 @@ import argparse
 import os
 from itertools import batched
 
-from annotate_prompts import system_prompts, make_user_prompt
+from annotate_prompts import dataset_labels, system_prompts, make_user_prompt
 
 ############
 # API Call #
@@ -74,14 +74,19 @@ if __name__ == "__main__":
     parser.add_argument('parsed_path', type = Path)
     parser.add_argument('annotation_dir', type = Path)
     parser.add_argument('--num', type = int, default = 5)
+    parser.add_argument('--num_examples', type = int, default = 0)
     args = parser.parse_args()
-    print(f"Running {args.num} DeepSeek API requests")
 
     data = pd.read_json(args.parsed_path)
     data = data[:args.num]
     data = data.reset_index(drop = True)
-    data["prompt"] = data["text"].apply(lambda x: make_user_prompt(args.dataset, x, None))
-    print(data)
+
+    examples = data.sample(min(args.num, args.num_examples))
+    data = data.loc[~data.index.isin(examples.index)]
+    labels = examples["y"].apply(lambda i: dataset_labels[args.dataset][i])
+    examples = list(zip(examples["text"], labels))
+
+    data["prompt"] = data["text"].apply(lambda x: make_user_prompt(args.dataset, x, examples))
 
     with open(".deepseek_api_key", "r") as file:
         deepseek_api_key = file.read().strip()
@@ -91,8 +96,10 @@ if __name__ == "__main__":
         base_url = "https://api.deepseek.com"
     )
 
+    print(f"Running {len(data)} DeepSeek API requests")
+    print(data)
     system_prompt = system_prompts[args.dataset]
-    for selection in batched(range(len(data)), n = 200):
+    for selection in batched(data.index, n = 200):
         selection = list(selection)
         print(f"Running batch {selection[0]:04} - {selection[-1]:04}")
         user_prompts = {i: data["prompt"][i] for i in selection}

@@ -3,6 +3,7 @@ import pandas as pd
 import argparse
 import os
 from sklearn.metrics import cohen_kappa_score
+from annotate_prompts import dataset_labels 
 
 def parse_annotation(text, labels):
     # Assumes that labels are not subsets of each other...
@@ -31,13 +32,6 @@ def parse_biobias(text):
         return 0
 
 if __name__ == "__main__":
-
-    dataset_labels = {
-        "amazon": ["NEGATIVE", "POSITIVE"],
-        "misinfo": ["THESUN", "THEGUARDIAN"],
-        "biobias": ["MALE", "FEMALE"],
-        "germeval": ["OFFENSIVE", "OTHER"],
-    }
 
     parser = argparse.ArgumentParser()
     parser.add_argument('dataset', choices = list(dataset_labels.keys()))

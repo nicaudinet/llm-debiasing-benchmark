@@ -5,6 +5,14 @@ system_prompts = {
     "germeval": "You are a perfect German tweet classification system",
 }
 
+dataset_labels = {
+    "amazon": ["NEGATIVE", "POSITIVE"],
+    "misinfo": ["THESUN", "THEGUARDIAN"],
+    "biobias": ["MALE", "FEMALE"],
+    "germeval": ["OFFENSIVE", "OTHER"],
+}
+
+
 def make_examples(examples):
     if examples == None:
         return ""

@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from annotate_prompts import system_prompts, make_user_prompt
+from annotate_prompts import system_prompts, dataset_labels, make_user_prompt
 from argparse import ArgumentParser
 from pathlib import Path
 import pandas as pd
@@ -19,6 +19,7 @@ parser.add_argument('--num', type = int, default = 5)
 parser.add_argument('--start', type = int, default = 0)
 parser.add_argument('--model', type = str, default = "microsoft/phi-4")
 parser.add_argument('--batchsize', type = int, default = 8)
+parser.add_argument('--num_examples', type = int, default = 0)
 args = parser.parse_args()
 print(f"Running {args.num} DeepSeek API requests")
 
@@ -37,6 +38,15 @@ data = pd.read_json(args.parsed_path)
 data = data[args.start:args.num]
 data = data.reset_index(drop = True)
 print(data)
+
+###################
+# Select examples #
+###################
+
+examples = data.sample(min(args.num, args.num_examples))
+texts = examples["text"]
+labels = examples["y"].apply(lambda i: dataset_labels[args.dataset][i])
+examples = list(zip(texts, labels))
 
 ############
 # Annotate #
@@ -68,7 +78,7 @@ def make_chat(text):
         },
         {
             "role": "user",
-            "content": make_user_prompt(args.dataset, text, None),
+            "content": make_user_prompt(args.dataset, text, examples),
         },
     ]
 
