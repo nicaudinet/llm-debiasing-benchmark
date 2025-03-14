@@ -22,6 +22,7 @@ parser.add_argument('--batchsize', type = int, default = 8)
 parser.add_argument('--num_examples', type = int, default = 0)
 args = parser.parse_args()
 print(f"Running {args.num} DeepSeek API requests")
+print(f"Start: {args.start}")
 
 device = "cpu"
 if torch.cuda.is_available():
@@ -35,7 +36,7 @@ print("Using device:", device)
 #################
 
 data = pd.read_json(args.parsed_path)
-data = data[args.start:args.num]
+data = data[args.start:args.start + args.num]
 data = data.reset_index(drop = True)
 print(data)
 
@@ -95,10 +96,12 @@ for batch in batched(range(len(data)), args.batchsize):
 
     for i, output in zip(batch, outputs):
 
-        prompt_file = prompt_dir / Path(f"prompt_{i:04}.txt")
+        prompt_file = prompt_dir / Path(f"prompt_{args.start + i:04}.txt")
+        print(prompt_file)
         with open(prompt_file, "w", encoding="utf-8") as file:
             file.write(output[0]["generated_text"][-2]["content"])
 
-        response_file = response_dir / Path(f"response_{i:04}.txt")
+        response_file = response_dir / Path(f"response_{args.start + i:04}.txt")
+        print(response_file)
         with open(response_file, "w", encoding="utf-8") as file:
             file.write(output[0]["generated_text"][-1]["content"])

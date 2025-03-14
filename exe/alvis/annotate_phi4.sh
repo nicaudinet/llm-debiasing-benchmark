@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=A40:1
-#SBATCH --time=0-01:00:00
+#SBATCH --time=0-02:00:00
 
 #SBATCH --output=logs/output_%A_%a.log
 #SBATCH --error=logs/error_%A_%a.log
