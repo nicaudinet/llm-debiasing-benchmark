@@ -18,17 +18,22 @@ function scp_plot_expert () {
     scp -r vera:$MIMER_PATH/vary-num-expert/$DATASET/plot/$ANNOTATION $RESULT_DIR
 }
 
-scp_plot_expert "bert" "simulation"
+scp_plot_expert "" "simulation"
+
 scp_plot_expert "bert" "amazon"
 scp_plot_expert "bert" "misinfo"
 scp_plot_expert "bert" "biobias"
 scp_plot_expert "bert" "germeval"
 
-scp_plot_expert "deepseek" "simulation"
 scp_plot_expert "deepseek" "amazon"
 scp_plot_expert "deepseek" "misinfo"
 scp_plot_expert "deepseek" "biobias"
 scp_plot_expert "deepseek" "germeval"
+
+scp_plot_expert "phi4" "amazon"
+scp_plot_expert "phi4" "misinfo"
+scp_plot_expert "phi4" "biobias"
+scp_plot_expert "phi4" "germeval"
 
 echo ""
 echo "------------------------"
@@ -46,14 +51,19 @@ function scp_plot_total () {
     scp -r vera:$MIMER_PATH/vary-num-total/$DATASET/plot/$ANNOTATION $RESULT_DIR
 }
 
-scp_plot_total "bert" "simulation"
+scp_plot_total "" "simulation"
+
 scp_plot_total "bert" "amazon"
 scp_plot_total "bert" "misinfo"
 scp_plot_total "bert" "biobias"
 scp_plot_total "bert" "germeval"
 
-scp_plot_total "deepseek" "simulation"
 scp_plot_total "deepseek" "amazon"
 scp_plot_total "deepseek" "misinfo"
 scp_plot_total "deepseek" "biobias"
 scp_plot_total "deepseek" "germeval"
+
+scp_plot_total "phi4" "amazon"
+scp_plot_total "phi4" "misinfo"
+scp_plot_total "phi4" "biobias"
+scp_plot_total "phi4" "germeval"

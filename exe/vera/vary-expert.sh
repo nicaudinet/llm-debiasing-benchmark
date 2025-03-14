@@ -10,8 +10,8 @@
 #SBATCH --array=1-500
 #SBATCH --time=0-00:15:00
 
-#SBATCH --output=/dev/null
-#SBATCH --error=/dev/null
+#SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/vary-expert/output_%A_%a.log
+#SBATCH --error=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/vary-expert/error_%A_%a.log
 
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all

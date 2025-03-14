@@ -26,17 +26,22 @@ function plot_expert () {
     fi
 }
 
-plot_expert "bert" "simulation"
+plot_expert "" "simulation"
+
 plot_expert "bert" "amazon"
 plot_expert "bert" "misinfo"
 plot_expert "bert" "biobias"
 plot_expert "bert" "germeval"
 
-plot_expert "deepseek" "simulation"
 plot_expert "deepseek" "amazon"
 plot_expert "deepseek" "misinfo"
 plot_expert "deepseek" "biobias"
 plot_expert "deepseek" "germeval"
+
+plot_expert "phi4" "amazon"
+plot_expert "phi4" "misinfo"
+plot_expert "phi4" "biobias"
+plot_expert "phi4" "germeval"
 
 ##########################
 ## Plots for vary total ##
@@ -59,14 +64,19 @@ function plot_total () {
     fi
 }
 
-plot_total "bert" "simulation"
+plot_total "" "simulation"
+
 plot_total "bert" "amazon"
 plot_total "bert" "misinfo"
 plot_total "bert" "biobias"
 plot_total "bert" "germeval"
 
-plot_total "deepseek" "simulation"
 plot_total "deepseek" "amazon"
 plot_total "deepseek" "misinfo"
 plot_total "deepseek" "biobias"
 plot_total "deepseek" "germeval"
+
+plot_total "phi4" "amazon"
+plot_total "phi4" "misinfo"
+plot_total "phi4" "biobias"
+plot_total "phi4" "germeval"

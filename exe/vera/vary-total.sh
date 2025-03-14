@@ -10,10 +10,11 @@
 #SBATCH --array=1-500
 #SBATCH --time=0-00:30:00
 
+#SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/vary-total/output_%A_%a.log
+#SBATCH --error=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/vary-total/error_%A_%a.log
+
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
-#SBATCH --output=/dev/null
-#SBATCH --error=/dev/null
 
 set -eo pipefail
 
