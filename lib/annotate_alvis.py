@@ -45,9 +45,9 @@ print(data)
 ###################
 
 examples = data.sample(min(args.num, args.num_examples))
-texts = examples["text"]
+data = data.loc[~data.index.isin(examples.index)]
 labels = examples["y"].apply(lambda i: dataset_labels[args.dataset][i])
-examples = list(zip(texts, labels))
+examples = list(zip(examples["text"], labels))
 
 ############
 # Annotate #
@@ -89,7 +89,7 @@ response_dir = args.annotation_dir / Path("responses")
 os.makedirs(prompt_dir, exist_ok = True)
 os.makedirs(response_dir, exist_ok = True)
 
-for batch in batched(range(len(data)), args.batchsize):
+for batch in batched(data.index, args.batchsize):
     texts = [data["text"][i] for i in batch]
     chats = [make_chat(text) for text in texts]
     outputs = generator(chats)

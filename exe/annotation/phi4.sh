@@ -20,7 +20,7 @@ function gather () {
     local DATASET=$1
     local ANN_DIR="$MIMER/$DATASET"
 
-    mkdir -p "$ANN_DIR/phi4"
+    mkdir -p "$ANN_DIR/phi4_10ex"
 
     echo ""
     echo "Gathering responses for $DATASET"
@@ -29,8 +29,8 @@ function gather () {
     python3 lib/gather_responses.py \
         "$DATASET" \
         "$ANN_DIR/parsed.json" \
-        "$ANN_DIR/phi4" \
-        "$ANN_DIR/annotated_phi4.json"
+        "$ANN_DIR/phi4_10ex" \
+        "$ANN_DIR/annotated_phi4_10ex.json"
 }
 
 gather "amazon"
