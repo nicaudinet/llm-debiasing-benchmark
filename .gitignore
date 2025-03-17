@@ -12,3 +12,4 @@ annotations
 .$pipeline.drawio.bkp
 logs
 venv
+run_annotation.sh
