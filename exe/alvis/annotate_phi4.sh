@@ -1,27 +1,21 @@
 #!/bin/bash
 
-#SBATCH --job-name=annotate-amazon
+#SBATCH --job-name=phi4-annotate
 #SBATCH --account=NAISS2025-22-180
 #SBATCH --partition=alvis
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=A40:1
-#SBATCH --time=0-03:00:00
+#SBATCH --time=0-06:00:00
 
-#SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/phi4_10ex/output_%A_%a.log
-#SBATCH --error=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/phi4_10ex/error_%A_%a.log
+#SBATCH --output=logs/phi4_10ex/output_%A_%a.log
+#SBATCH --error=logs/phi4_10ex/error_%A_%a.log
 
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
 
-if [ $# -ne 2 ]; then
-    echo "Error: expecting exactly two arguments"
-    exit 1
-fi
-
 DATASET=$1
-NUM_EXPERT=$2
 
 module purge
 module load Python/3.12.3-GCCcore-13.3.0
@@ -39,5 +33,6 @@ python3 "$BASE_DIR/lib/annotate_alvis.py" \
 	"$MIMER_PATH/annotations/$DATASET/parsed.json" \
 	"$ANN_DIR" \
 	--model "microsoft/phi-4" \
-	--num 10000 \
-	--num_examples "$NUM_EXPERT"
+	--num 8640 \
+	--start 1360 \
+	--num_examples 10
