@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=vary-expert-amazon
+#SBATCH --job-name=vary-expert
 #SBATCH --account=C3SE2025-1-14
 #SBATCH --partition=vera
 
@@ -10,8 +10,8 @@
 #SBATCH --array=1-500
 #SBATCH --time=0-00:15:00
 
-#SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/misinfo_debug/full_run/output_%A_%a.log
-#SBATCH --error=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/misinfo_debug/full_run/error_%A_%a.log
+#SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/vary-expert/output_%A_%a.log
+#SBATCH --error=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/vary-expert/error_%A_%a.log
 
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
