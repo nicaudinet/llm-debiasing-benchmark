@@ -14,3 +14,6 @@ logs
 venv
 run_annotation.sh
 hists
+.api_key_anthropic
+.api_key_deepseek
+.api_key_openai

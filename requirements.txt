@@ -13,3 +13,4 @@ openai
 ppi-python
 accelerate
 bitsandbytes
+anthropic
