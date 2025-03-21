@@ -47,10 +47,74 @@ print(f"Total files: {total_reps}")
 X = data["num_expert_samples"]
 
 ################
+# Compute Bias #
+################
+
+def compute_bias(coeffs_true, coeffs_pred):
+    assert coeffs_true.shape == coeffs_pred.shape
+    error = (coeffs_true - coeffs_pred) / coeffs_true
+    bias = np.mean(error, axis = 0)
+    num_repetitions = coeffs_true.shape[0]
+    std_err = np.std(error, axis = 0) / np.sqrt(num_repetitions)
+    upper = bias + 2 * std_err
+    lower = bias - 2 * std_err
+    return bias, upper, lower
+
+bias_exp, bias_upper_exp, bias_lower_exp = compute_bias(coeffs_all, coeffs_exp)
+bias_dsl, bias_upper_dsl, bias_lower_dsl = compute_bias(coeffs_all, coeffs_dsl)
+bias_ppi, bias_upper_ppi, bias_lower_ppi = compute_bias(coeffs_all, coeffs_ppi)
+
+#############
+# Plot Bias #
+#############
+
+colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+plt.figure()
+plt.xscale('log')
+plt.title(f"Standardised bias vs. number of expert samples (R = {total_reps})")
+plt.xlabel("Number of expert samples (n)")
+plt.ylabel("Standardised bias")
+
+plt.fill_between(
+    X,
+    bias_lower_exp,
+    bias_upper_exp,
+    color = colors[0],
+    alpha = 0.2,
+    linewidth = 0,
+)
+plt.plot(X, bias_exp, "o-", color = colors[0], label = "expert only")
+
+plt.fill_between(
+    X,
+    bias_lower_dsl,
+    bias_upper_dsl,
+    color = colors[1],
+    alpha = 0.2,
+    linewidth = 0,
+)
+plt.plot(X, bias_dsl, "o-", color = colors[1], label = "DSL")
+
+plt.fill_between(
+    X,
+    bias_lower_ppi,
+    bias_upper_ppi,
+    color = colors[2],
+    alpha = 0.2,
+    linewidth = 0,
+)
+plt.plot(X, bias_ppi, "o-", color = colors[2], label = "PPI")
+
+plt.legend()
+
+plt.savefig(args.plot_dir / Path(f"bias.pdf"))
+plt.savefig(args.plot_dir / Path(f"bias.png"))
+
+################
 # Compute RMSE #
 ################
 
-# Compute RMSE with all
 def compute_rmse(coeffs_true, coeffs_pred):
     assert coeffs_true.shape[0] == coeffs_pred.shape[0]
     rmse = np.sqrt(np.mean((coeffs_true - coeffs_pred) ** 2, axis=(0,2)))
@@ -61,9 +125,9 @@ def compute_rmse(coeffs_true, coeffs_pred):
     lower = rmse - 2 * std_err
     return rmse, upper, lower
 
-rmse_exp, upper_exp, lower_exp = compute_rmse(coeffs_all, coeffs_exp)
-rmse_dsl, upper_dsl, lower_dsl = compute_rmse(coeffs_all, coeffs_dsl)
-rmse_ppi, upper_ppi, lower_ppi = compute_rmse(coeffs_all, coeffs_ppi)
+rmse_exp, rmse_upper_exp, rmse_lower_exp = compute_rmse(coeffs_all, coeffs_exp)
+rmse_dsl, rmse_upper_dsl, rmse_lower_dsl = compute_rmse(coeffs_all, coeffs_dsl)
+rmse_ppi, rmse_upper_ppi, rmse_lower_ppi = compute_rmse(coeffs_all, coeffs_ppi)
 
 #############
 # Plot RMSE #
@@ -81,8 +145,8 @@ plt.ylabel("RMSE w.r.t. gold annotations for all samples")
 
 plt.fill_between(
     X,
-    lower_exp,
-    upper_exp,
+    rmse_lower_exp,
+    rmse_upper_exp,
     color = colors[0],
     alpha = 0.2,
     linewidth = 0,
@@ -91,8 +155,8 @@ plt.plot(X, rmse_exp, "o-", color = colors[0], label = "expert only")
 
 plt.fill_between(
     X,
-    lower_dsl,
-    upper_dsl,
+    rmse_lower_dsl,
+    rmse_upper_dsl,
     color = colors[1],
     alpha = 0.2,
     linewidth = 0,
@@ -101,8 +165,8 @@ plt.plot(X, rmse_dsl, "o-", color = colors[1], label = "DSL")
 
 plt.fill_between(
     X,
-    lower_ppi,
-    upper_ppi,
+    rmse_lower_ppi,
+    rmse_upper_ppi,
     color = colors[2],
     alpha = 0.2,
     linewidth = 0,
