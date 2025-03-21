@@ -17,7 +17,7 @@ args = parser.parse_args()
 # Gather data #
 ###############
 
-print("Gathering data from files")
+print(" - Gathering data from files")
 coeffs_all = []
 coeffs_exp = []
 coeffs_dsl = []
@@ -41,7 +41,7 @@ coeffs_dsl = np.stack(coeffs_dsl, axis=0)
 coeffs_ppi = np.stack(coeffs_ppi, axis=0)
 
 total_reps = coeffs_all.shape[0]
-print(f"Total files: {total_reps}")
+print(f" - Total files: {total_reps}")
 
 # Assume X-axis (number of expert samples) is the same for all files
 X = data["num_expert_samples"]
@@ -50,12 +50,14 @@ X = data["num_expert_samples"]
 # Compute Bias #
 ################
 
+print(" - Computing the bias")
+
 def compute_bias(coeffs_true, coeffs_pred):
     assert coeffs_true.shape == coeffs_pred.shape
     error = (coeffs_true - coeffs_pred) / coeffs_true
-    bias = np.mean(error, axis = 0)
+    bias = np.mean(error, axis = (0,2))
     num_repetitions = coeffs_true.shape[0]
-    std_err = np.std(error, axis = 0) / np.sqrt(num_repetitions)
+    std_err = np.std(error, axis = (0,2)) / np.sqrt(num_repetitions)
     upper = bias + 2 * std_err
     lower = bias - 2 * std_err
     return bias, upper, lower
@@ -67,6 +69,8 @@ bias_ppi, bias_upper_ppi, bias_lower_ppi = compute_bias(coeffs_all, coeffs_ppi)
 #############
 # Plot Bias #
 #############
+
+print(" - Plotting the bias")
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -115,6 +119,8 @@ plt.savefig(args.plot_dir / Path(f"bias.png"))
 # Compute RMSE #
 ################
 
+print(" - Computing the RMSE")
+
 def compute_rmse(coeffs_true, coeffs_pred):
     assert coeffs_true.shape[0] == coeffs_pred.shape[0]
     rmse = np.sqrt(np.mean((coeffs_true - coeffs_pred) ** 2, axis=(0,2)))
@@ -133,9 +139,9 @@ rmse_ppi, rmse_upper_ppi, rmse_lower_ppi = compute_rmse(coeffs_all, coeffs_ppi)
 # Plot RMSE #
 #############
 
-colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+print(" - Plotting the RMSE")
 
-print(coeffs_all.shape)
+colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 plt.figure()
 plt.xscale('log')
