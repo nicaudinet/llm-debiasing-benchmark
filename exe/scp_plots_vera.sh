@@ -6,7 +6,6 @@ echo ""
 echo "-------------------------"
 echo "-- Vary Expert Samples --"
 echo "-------------------------"
-echo ""
 
 function scp_plot_expert () {
     ANNOTATION=$1
@@ -15,7 +14,7 @@ function scp_plot_expert () {
     echo "Copying plots from $DATASET"
     RESULT_DIR="results/vera/vary-num-expert/$DATASET/$ANNOTATION"
     mkdir -p $RESULT_DIR
-    scp -r vera:$MIMER_PATH/vary-num-expert/$DATASET/plot/$ANNOTATION $RESULT_DIR
+    scp -r vera2:$MIMER_PATH/vary-num-expert/$DATASET/plot/$ANNOTATION $RESULT_DIR
 }
 
 scp_plot_expert "" "simulation"
@@ -39,7 +38,6 @@ echo ""
 echo "------------------------"
 echo "-- Vary Total Samples --"
 echo "------------------------"
-echo ""
 
 function scp_plot_total () {
     ANNOTATION=$1
@@ -48,7 +46,7 @@ function scp_plot_total () {
     echo "Copying plots from $DATASET"
     RESULT_DIR="results/vera/vary-num-total/$DATASET/$ANNOTATION"
     mkdir -p $RESULT_DIR
-    scp -r vera:$MIMER_PATH/vary-num-total/$DATASET/plot/$ANNOTATION $RESULT_DIR
+    scp -r vera2:$MIMER_PATH/vary-num-total/$DATASET/plot/$ANNOTATION $RESULT_DIR
 }
 
 scp_plot_total "" "simulation"

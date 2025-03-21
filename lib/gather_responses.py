@@ -50,7 +50,7 @@ if __name__ == "__main__":
     prompts = {}
     for index in responses.keys():
         try:
-            prompt_file = args.annotation_dir / Path(f"prompts/prompt_{index:04}.txt")
+            prompt_file = args.annotation_dir / Path(f"prompts/prompt_{index:05}.txt")
             with open(prompt_file, "r", encoding = "utf-8") as f:
                 prompts[index] = f.read().strip()
         except Exception as e:

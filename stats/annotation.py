@@ -19,6 +19,6 @@ for dataset in list_subdir(args.annotation_dir):
                 num_responses = len(list(response_dir.iterdir()))
             except FileNotFoundError:
                 num_responses = 0
-            print(f" - {annotation.parts[-1]}: {num_responses} annotations")
+            print(f" - {annotation.parts[-1]}: {num_responses}")
 
 print("")
