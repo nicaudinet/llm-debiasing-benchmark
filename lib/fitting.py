@@ -1,12 +1,16 @@
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-import tempfile
-import rpy2.robjects as ro
 from pathlib import Path
-import pandas as pd
 from ppi_py import ppi_logistic_pointestimate
+from scipy.optimize import minimize
+from scipy.special import expit
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import KFold
+import numpy as np
+import pandas as pd
+import rpy2.robjects as ro
+import tempfile
 
-def fit(X, Y):
+def fit(X, Y, seed):
     """
     Fit a logistic regression to the data and return the coefficients
     """
@@ -14,12 +18,27 @@ def fit(X, Y):
         fit_intercept = True, # also fit the intercept
         penalty = None, # no regularisation (default in R)
         max_iter = 1000,
+        random_state = seed,
     )
     logreg.fit(X, Y)
     coeffs = np.insert(logreg.coef_, 0, logreg.intercept_)
     return coeffs
 
-def fit_dsl(X, Y_true, Y_pred, selected):
+def fit_ppi(X, Y_true, Y_pred, selected):
+
+    # Add intercept
+    ones = np.ones((X.shape[0], 1))
+    X = np.concatenate([ones, X], axis=1)
+
+    return ppi_logistic_pointestimate(
+        X = X[selected],
+        Y = Y_true[selected],
+        Yhat = Y_pred[selected],
+        X_unlabeled = X[~selected],
+        Yhat_unlabeled = Y_pred[~selected],
+    )
+
+def fit_dsl_R(X, Y_true, Y_pred, selected):
     """
     Fit a logistic regression to the data with predicted and expert annotations
     using the DSL from the R package
@@ -74,16 +93,67 @@ def fit_dsl(X, Y_true, Y_pred, selected):
 
     return coeffs
 
-def fit_ppi(X, Y_true, Y_pred, selected):
+###########
+# Own DSL #
+###########
 
-    # Add intercept
-    ones = np.ones((X.shape[0], 1))
-    X = np.concatenate([ones, X], axis=1)
+def logistic_moment(beta, X, Y):
 
-    return ppi_logistic_pointestimate(
-        X = X[selected],
-        Y = Y_true[selected],
-        Yhat = Y_pred[selected],
-        X_unlabeled = X[~selected],
-        Yhat_unlabeled = Y_pred[~selected],
+    assert len(beta.shape) == 1
+    assert len(X.shape) == 2
+    assert len(Y.shape) == 1
+    assert X.shape[0] == Y.shape[0]
+    assert X.shape[1] == beta.shape[0]
+
+    moment = (Y - expit(X @ beta))[:, np.newaxis] * X
+    return moment
+
+def fit_dsl(X, Y_true, Y_pred, selected, seed):
+
+    assert len(X.shape) == 2
+    assert len(Y_true.shape) == 1
+    assert len(Y_pred.shape) == 1
+    assert X.shape[0] == Y_pred.shape[0]
+    assert Y_true.shape[0] == len(selected)
+
+    Y_hat = np.zeros_like(Y_pred)
+
+    kf = KFold(n_splits = 10, shuffle = True, random_state = seed)
+    for train_idx, test_idx in kf.split(np.zeros(X.shape[0])):
+
+        idx = [i for i in train_idx if i in selected]
+        X_train = np.column_stack((X[idx,:], Y_pred[idx]))
+        idx = [np.where(selected == i)[0] for i in idx]
+        Y_train = np.ravel(Y_true[idx])
+
+        rf = RandomForestRegressor(
+            n_estimators = 2000,
+            max_depth = None,
+            random_state = seed,
+            min_samples_leaf = 5,
+        )
+        rf.fit(X_train, Y_train)
+
+        X_test = np.column_stack((X[test_idx, :], Y_pred[test_idx]))
+        Y_hat[test_idx] = rf.predict(X_test)
+
+    XX = np.insert(X, 0, 1, axis = 1)
+
+    def loss(beta):
+        m_pred = logistic_moment(beta, XX, Y_hat)
+        m_true = logistic_moment(beta, XX[selected,:], Y_true)
+        pi = len(selected) / XX.shape[0]
+        moments = m_pred
+        moments[selected] = m_pred[selected] - (m_pred[selected] - m_true) / pi
+        return np.linalg.norm(moments)
+
+    beta0 = np.zeros(XX.shape[1])
+    result = minimize(
+        fun = loss,
+        x0 = beta0,
+        options = {"maxiter": 1000},
+        method = "L-BFGS-B",
+        tol = 1e-7,
     )
+
+    return result.x

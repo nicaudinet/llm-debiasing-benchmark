@@ -1,11 +1,12 @@
-import numpy as np
-import scipy
+from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor
+import numpy as np
 import os
-import sys
-from argparse import ArgumentParser
+import random
+import scipy
+import time
 
 from fitting import fit, fit_dsl, fit_ppi
 
@@ -53,12 +54,11 @@ def generate(num_samples, prediction_accuracy):
 
 @dataclass
 class SampleParams:
-    # total number of samples
-    N: int
-    # number of expert-annotated amples
-    n: int
-    # prediction accuracy
-    pq: float
+    N: int # total number of samples
+    n: int # number of expert-annotated amples
+    pq: float # prediction accuracy
+    seed: int # random state
+
 
 def compute_coeffs(params: SampleParams):
 
@@ -66,9 +66,9 @@ def compute_coeffs(params: SampleParams):
 
     X, Y, Y_hat = generate(params.N, params.pq)
 
-    coeffs_all = fit(X, Y)
-    coeffs_exp = fit(X[selected], Y[selected])
-    coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
+    coeffs_all = fit(X, Y, params.seed)
+    coeffs_exp = fit(X[selected], Y[selected], params.seed)
+    coeffs_dsl = fit_dsl(X, Y, Y_hat, selected, params.seed)
     coeffs_ppi = fit_ppi(X, Y, Y_hat, selected)
 
     return coeffs_all, coeffs_exp, coeffs_dsl, coeffs_ppi
@@ -81,6 +81,7 @@ def simulate(
         prediction_accuracy: float,
         num_coefficients: int,
         num_cores: int,
+        seed: int,
     ):
 
     size = (num_data_points, num_coefficients)
@@ -105,6 +106,7 @@ def simulate(
             N = num_total_samples,
             n = n,
             pq = prediction_accuracy,
+            seed = seed,
         ))
 
     with ProcessPoolExecutor(max_workers = num_cores) as executor:
@@ -131,11 +133,15 @@ if __name__ == "__main__":
         num_cores = 11
     print(f"Using {num_cores} cores")
 
-    if args.seed is not None:
-        np.random.seed(args.seed)
-        print(f"Using seed = {args.seed}")
-    else:
+    if args.seed is None:
         print("The seed was not provided, using current system time")
+        seed = time.time()
+    else:
+        print(f"Using seed = {args.seed}")
+        seed = args.seed
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
 
     results = simulate(
         num_total_samples = 10000,
@@ -144,6 +150,7 @@ if __name__ == "__main__":
         prediction_accuracy = 0.9,
         num_coefficients = 5, # 4 Xs + intercept
         num_cores = num_cores,
+        seed = seed,
     )
 
     print(f"Saving results to {args.results_path}")
