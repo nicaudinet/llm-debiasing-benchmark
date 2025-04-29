@@ -14,3 +14,4 @@ ppi-python
 accelerate
 bitsandbytes
 anthropic
+statsmodels
