@@ -6,11 +6,12 @@ import os
 import pandas as pd
 from argparse import ArgumentParser
 
-from fitting import fit, fit_dsl, fit_ppi
+import fitting as fit
 
 @dataclass
 class SampleParams:
     data: pd.DataFrame
+    model: str
     n: int
 
 def compute_coeffs(params: SampleParams):
@@ -21,15 +22,24 @@ def compute_coeffs(params: SampleParams):
     Y = params.data["y"].to_numpy().astype(float)
     Y_hat = params.data["y_hat"].to_numpy()
 
-    coeffs_all = fit(X, Y)
-    coeffs_exp = fit(X[selected], Y[selected])
-    coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
-    coeffs_ppi = fit_ppi(X, Y, Y_hat, selected)
+    if params.model == "linear":
+        coeffs_all = fit.linear_fit(X, Y)
+        coeffs_exp = fit.linear_fit(X[selected], Y[selected])
+        coeffs_dsl = fit.linear_fit_dsl(X, Y, Y_hat, selected)
+        coeffs_ppi = fit.linear_fit_ppi(X, Y, Y_hat, selected)
+    elif params.model == "logistic":
+        coeffs_all = fit.logit_fit(X, Y)
+        coeffs_exp = fit.logit_fit(X[selected], Y[selected])
+        coeffs_dsl = fit.logit_fit_dsl(X, Y, Y_hat, selected)
+        coeffs_ppi = fit.logit_fit_ppi(X, Y, Y_hat, selected)
+    else:
+        raise Exception(f"model {params.model} is not supported")
 
     return coeffs_all, coeffs_exp, coeffs_dsl, coeffs_ppi
 
 def simulate(
         data: pd.DataFrame, # expected columns: (x1, x2, x3, y, y_hat)
+        model: str,
         num_data_points: int,
         min_expert_samples: int,
         num_coefficients: int,
@@ -56,6 +66,7 @@ def simulate(
     for n in np.round(num_expert_samples).astype(int):
         params.append(SampleParams(
             data = data,
+            model = model,
             n = n,
         ))
 
@@ -75,7 +86,9 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("annotated_path", type = Path)
     parser.add_argument("results_path", type = Path)
+    parser.add_argument("model", type = str)
     parser.add_argument("--seed", type = int)
+    parser.add_argument("--centered", action = "store_true")
     args = parser.parse_args()
 
     if "SLURM_CPUS_ON_NODE" in os.environ:
@@ -93,9 +106,17 @@ if __name__ == "__main__":
     print("Reading the data")
     data = pd.read_json(args.annotated_path)
 
+    if args.centered:
+        print("Centering the data")
+        data["x1"] = data["x1"] - data["x1"].mean()
+        data["x2"] = data["x2"] - data["x2"].mean()
+        data["x3"] = data["x3"] - data["x3"].mean()
+        data["x4"] = data["x4"] - data["x4"].mean()
+
     print("Running the experiment")
     results = simulate(
         data = data,
+        model = args.model,
         num_data_points = 10,
         min_expert_samples = 200,
         num_coefficients = 5, # 4 Xs + intercept
