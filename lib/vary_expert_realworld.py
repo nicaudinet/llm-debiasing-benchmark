@@ -84,9 +84,9 @@ def simulate(
 if __name__ == "__main__":
 
     parser = ArgumentParser()
+    parser.add_argument("model", type = str)
     parser.add_argument("annotated_path", type = Path)
     parser.add_argument("results_path", type = Path)
-    parser.add_argument("model", type = str)
     parser.add_argument("--seed", type = int)
     parser.add_argument("--centered", action = "store_true")
     args = parser.parse_args()

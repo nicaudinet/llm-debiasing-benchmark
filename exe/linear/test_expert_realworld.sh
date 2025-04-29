@@ -3,9 +3,9 @@
 for i in {1..10}
 do
     python lib/vary_expert_realworld.py \
+        "linear" \
         "results/annotations/misinfo/annotated_deepseek.json" \
         "results/linear/misinfo/deepseek/data/data_$i.npz" \
-        "linear" \
         --seed $i \
         --centered
 done
