@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=12
-#SBATCH --array=1-200
+#SBATCH --array=1-1
 #SBATCH --time=0-00:15:00
 
 #SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/linear/logs/output_%A_%a.log
@@ -27,13 +27,15 @@ DATA_DIR="$MIMER_PATH/linear/data/$DATASET/$ANNOTATION"
 
 mkdir -p $DATA_DIR
 
+source "$MIMER_PATH/venv_vera/bin/activate"
+
 module purge
 module load rpy2
 module load scikit-learn/1.4.2-gfbf-2023a
 
-source "$MIMER_PATH/venv_vera/bin/activate"
+python
 
-python "$BASE_DIR/lib/vary_expert_realworld.py" \
+python3.11 "$BASE_DIR/lib/vary_expert_realworld.py" \
     "linear" \
     "$MIMER_PATH/annotations/$DATASET/annotated_$ANNOTATION.json" \
     "$DATA_DIR/data_${SLURM_ARRAY_TASK_ID}.npz" \
