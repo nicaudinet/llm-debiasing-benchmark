@@ -10,12 +10,11 @@ from argparse import ArgumentParser
 
 def parse_args():
     parser = ArgumentParser()
-    # parser.add_argument("results_path", type = Path)
     parser.add_argument("plot_dir", type = Path)
     parser.add_argument(
         "--norm",
         choices = ["raw", "per-coeff", "odds", "logodds", "percent"],
-        default = "symlog",
+        default = "logodds",
     )
     return parser.parse_args()
 
