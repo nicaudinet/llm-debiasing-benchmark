@@ -16,6 +16,12 @@ def parse_args():
         choices = ["raw", "per-coeff", "odds", "logodds", "percent"],
         default = "logodds",
     )
+    parser.add_argument("--onlyrep", action = "store_true")
+    parser.add_argument(
+        "--intercept",
+        choices = ["with", "without", "only"],
+        default = "without",
+    )
     return parser.parse_args()
 
 ###############
@@ -159,56 +165,6 @@ def inverse(x, N):
     """
     return 1 + np.log10(x) / np.log10(N / 200)
 
-
-def plot_bias():
-    pass
-
-# print(" - Plotting the bias")
-#
-# colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-#
-# plt.figure()
-# plt.xscale('log')
-# plt.title(f"Standardised bias vs. number of expert samples (R = {total_reps})")
-# plt.xlabel("Number of expert samples (n)")
-# plt.ylabel("Standardised bias")
-#
-# plt.fill_between(
-#     X,
-#     bias_lower_exp,
-#     bias_upper_exp,
-#     color = colors[0],
-#     alpha = 0.2,
-#     linewidth = 0,
-# )
-# plt.plot(X, bias_exp, "o-", color = colors[0], label = "expert only")
-#
-# plt.fill_between(
-#     X,
-#     bias_lower_dsl,
-#     bias_upper_dsl,
-#     color = colors[1],
-#     alpha = 0.2,
-#     linewidth = 0,
-# )
-# plt.plot(X, bias_dsl, "o-", color = colors[1], label = "DSL")
-#
-# plt.fill_between(
-#     X,
-#     bias_lower_ppi,
-#     bias_upper_ppi,
-#     color = colors[2],
-#     alpha = 0.2,
-#     linewidth = 0,
-# )
-# plt.plot(X, bias_ppi, "o-", color = colors[2], label = "PPI")
-#
-# plt.legend()
-#
-# plt.savefig(args.plot_dir / Path(f"bias.pdf"))
-# plt.savefig(args.plot_dir / Path(f"bias.png"))
-
-
 def plot_rmse(ax, exp, dsl, ppi, standardise):
 
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -328,15 +284,17 @@ def plot_rmse_ratio(ax, dsl, ppi, ratio):
     ax.legend()
     
 
-def plot_all(ax, data, norm):
+def plot_all(ax, data, norm, onlyrep, intercept):
 
     R = min(data[d][a]["all"].shape[0] for d in datasets for a in annotations)
-    print(f"- minimum number of repetitions: {R}")
+    print(f" - minimum number of repetitions: {R}")
 
     D = len(datasets)
     A = len(annotations)
+    C = 5 # number of coefficients
+    
     num_exp = np.zeros((D, A, 10))
-    size = (D, A, R, 10, 5)
+    size = (D, A, R, 10, C)
     coeffs_all = np.zeros(size)
     coeffs_exp = np.zeros(size)
     coeffs_dsl = np.zeros(size)
@@ -352,28 +310,50 @@ def plot_all(ax, data, norm):
             coeffs_ppi[i,j,:,:,:] = data[d][a]["ppi"][subsample,:,:]
             num_exp[i,j,:] = data[d][a]["num_expert_samples"]
 
-    transposed = (2, 3, 4, 0, 1)
-    reshaped = (R, 10, 5 * D * A)
-    coeffs_all = coeffs_all.transpose(transposed).reshape(reshaped)
-    coeffs_exp = coeffs_exp.transpose(transposed).reshape(reshaped)
-    coeffs_dsl = coeffs_dsl.transpose(transposed).reshape(reshaped)
-    coeffs_ppi = coeffs_ppi.transpose(transposed).reshape(reshaped)
+    if intercept == "without":
+        C = 4
+        coeffs_all = coeffs_all[:,:,:,:,1:]
+        coeffs_exp = coeffs_exp[:,:,:,:,1:]
+        coeffs_dsl = coeffs_dsl[:,:,:,:,1:]
+        coeffs_ppi = coeffs_ppi[:,:,:,:,1:]
+    elif intercept == "only":
+        C = 1
+        coeffs_all = coeffs_all[:,:,:,:,0]
+        coeffs_exp = coeffs_exp[:,:,:,:,0]
+        coeffs_dsl = coeffs_dsl[:,:,:,:,0]
+        coeffs_ppi = coeffs_ppi[:,:,:,:,0]
+    elif intercept != "with":
+        raise Exception(f"intercept {intercept} not supported in plot_all")
 
-    print("- computing and plotting the RMSE")
+    if onlyrep:
+        transposed = (2, 3, 4, 0, 1)
+        reshaped = (R, 10, C * D * A)
+        coeffs_all = coeffs_all.transpose(transposed).reshape(reshaped)
+        coeffs_exp = coeffs_exp.transpose(transposed).reshape(reshaped)
+        coeffs_dsl = coeffs_dsl.transpose(transposed).reshape(reshaped)
+        coeffs_ppi = coeffs_ppi.transpose(transposed).reshape(reshaped)
+    else:
+        reshaped = (D * A * R, 10, C)
+        coeffs_all = coeffs_all.reshape(reshaped)
+        coeffs_exp = coeffs_exp.reshape(reshaped)
+        coeffs_dsl = coeffs_dsl.reshape(reshaped)
+        coeffs_ppi = coeffs_ppi.reshape(reshaped)
+
+    print(" - computing and plotting the RMSE")
     if norm == "raw":
-        print("- using no normalisation")
+        print(" - using no normalisation")
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, False)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, False)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, False)
         plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, False)
     elif norm == "per-coeff":
-        print("- using per-coefficient normalisation")
+        print(" - using per-coefficient normalisation")
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, True)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, True)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, True)
         plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, True)
     elif norm == "odds" or norm == "logodds" or norm == "percent":
-        print(f"- using ratio ({norm}) normalisation")
+        print(f" - using ratio ({norm}) normalisation")
         rmse_dsl, rmse_ppi = compute_rmse_ratio(
             coeffs_all,
             coeffs_exp,
@@ -386,14 +366,15 @@ def plot_all(ax, data, norm):
         raise Exception(f"norm {norm} not supported in plot_all")
 
 
-def plot_dataset(ax, data, norm):
+def plot_dataset(ax, data, norm, onlyrep, intercept):
 
     R = min(data[a]["all"].shape[0] for a in annotations)
-    print(f"- minimum number of repetitions: {R}")
+    print(f" - minimum number of repetitions: {R}")
 
     A = len(annotations)
+    C = 5 # number of coefficients
     num_exp = np.zeros((A, 10))
-    size = (A, R, 10, 5)
+    size = (A, R, 10, C)
     coeffs_all = np.zeros(size)
     coeffs_exp = np.zeros(size)
     coeffs_dsl = np.zeros(size)
@@ -408,29 +389,51 @@ def plot_dataset(ax, data, norm):
         coeffs_ppi[i,:,:,:] = data[a]["ppi"][subsample,:,:]
         num_exp[i,:] = data[a]["num_expert_samples"]
 
-    transposed = (1, 2, 3, 0)
-    reshaped = (R, 10, 5 * A)
-    coeffs_all = coeffs_all.transpose(transposed).reshape(reshaped)
-    coeffs_exp = coeffs_exp.transpose(transposed).reshape(reshaped)
-    coeffs_dsl = coeffs_dsl.transpose(transposed).reshape(reshaped)
-    coeffs_ppi = coeffs_ppi.transpose(transposed).reshape(reshaped)
+    if intercept == "without":
+        C = 4
+        coeffs_all = coeffs_all[:,:,:,1:]
+        coeffs_exp = coeffs_exp[:,:,:,1:]
+        coeffs_dsl = coeffs_dsl[:,:,:,1:]
+        coeffs_ppi = coeffs_ppi[:,:,:,1:]
+    elif intercept == "only":
+        C = 1
+        coeffs_all = coeffs_all[:,:,:,0]
+        coeffs_exp = coeffs_exp[:,:,:,0]
+        coeffs_dsl = coeffs_dsl[:,:,:,0]
+        coeffs_ppi = coeffs_ppi[:,:,:,0]
+    elif intercept != "with":
+        raise Exception(f"intercept {intercept} not supported in plot_all")
 
-    print("- computing and plotting the RMSE")
+    if onlyrep:
+        transposed = (1, 2, 3, 0)
+        reshaped = (R, 10, C * A)
+        coeffs_all = coeffs_all.transpose(transposed).reshape(reshaped)
+        coeffs_exp = coeffs_exp.transpose(transposed).reshape(reshaped)
+        coeffs_dsl = coeffs_dsl.transpose(transposed).reshape(reshaped)
+        coeffs_ppi = coeffs_ppi.transpose(transposed).reshape(reshaped)
+    else:
+        reshaped = (A * R, 10, C)
+        coeffs_all = coeffs_all.reshape(reshaped)
+        coeffs_exp = coeffs_exp.reshape(reshaped)
+        coeffs_dsl = coeffs_dsl.reshape(reshaped)
+        coeffs_ppi = coeffs_ppi.reshape(reshaped)
+
+    print(" - computing and plotting the RMSE")
     ax.set_title(dataset)
     if norm == "raw":
-        print("- using no normalisation")
+        print(" - using no normalisation")
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, False)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, False)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, False)
         plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, False)
     elif norm == "per-coeff":
-        print("- using per-coefficient normalisation")
+        print(" - using per-coefficient normalisation")
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, True)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, True)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, True)
         plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, True)
     elif norm == "odds" or  norm == "logodds" or norm == "percent":
-        print(f"- using ratio ({norm}) normalisation")
+        print(f" - using ratio ({norm}) normalisation")
         rmse_dsl, rmse_ppi = compute_rmse_ratio(
             coeffs_all,
             coeffs_exp,
@@ -441,6 +444,57 @@ def plot_dataset(ax, data, norm):
         plot_rmse_ratio(ax, rmse_dsl, rmse_ppi, norm)
     else:
         raise Exception(f"norm {norm} not supported in plot_dataset")
+
+def plot_annotation(ax, data, norm, title, intercept):
+
+    R = data["all"].shape[0]
+    print(f" - number of repetitions: {R}")
+
+    coeffs_all = data["all"]
+    coeffs_exp = data["exp"]
+    coeffs_dsl = data["dsl"]
+    coeffs_ppi = data["ppi"]
+
+    if intercept == "without":
+        coeffs_all = coeffs_all[:,:,1:]
+        coeffs_exp = coeffs_exp[:,:,1:]
+        coeffs_dsl = coeffs_dsl[:,:,1:]
+        coeffs_ppi = coeffs_ppi[:,:,1:]
+    elif intercept == "only":
+        coeffs_all = np.expand_dims(coeffs_all[:,:,0], axis=2)
+        coeffs_exp = np.expand_dims(coeffs_exp[:,:,0], axis=2)
+        coeffs_dsl = np.expand_dims(coeffs_dsl[:,:,0], axis=2)
+        coeffs_ppi = np.expand_dims(coeffs_ppi[:,:,0], axis=2)
+    elif intercept != "with":
+        raise Exception(f"intercept {intercept} not supported in plot_all")
+
+    print(" - computing and plotting the RMSE")
+    ax.set_title(title)
+    if norm == "raw":
+        print(" - using no normalisation")
+        rmse_exp = compute_rmse(coeffs_all, coeffs_exp, False)
+        rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, False)
+        rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, False)
+        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, False)
+    elif norm == "per-coeff":
+        print(" - using per-coefficient normalisation")
+        rmse_exp = compute_rmse(coeffs_all, coeffs_exp, True)
+        rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, True)
+        rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, True)
+        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, True)
+    elif norm == "odds" or  norm == "logodds" or norm == "percent":
+        print(f" - using ratio ({norm}) normalisation")
+        rmse_dsl, rmse_ppi = compute_rmse_ratio(
+            coeffs_all,
+            coeffs_exp,
+            coeffs_dsl,
+            coeffs_ppi,
+            norm,
+        )
+        plot_rmse_ratio(ax, rmse_dsl, rmse_ppi, norm)
+    else:
+        raise Exception(f"norm {norm} not supported in plot_dataset")
+
 
 if __name__ == "__main__":
 
@@ -456,7 +510,7 @@ if __name__ == "__main__":
     print("")
     print("Plot for all datasets:")
     fig, ax = plt.subplots(figsize=(7,5))
-    plot_all(ax, data, args.norm)
+    plot_all(ax, data, args.norm, args.onlyrep, args.intercept)
     plt.tight_layout()
     plt.savefig(args.plot_dir / "rmse_all.png")
     plt.savefig(args.plot_dir / "rmse_all.pdf")
@@ -467,9 +521,33 @@ if __name__ == "__main__":
     for i, dataset in enumerate(datasets):
         print("")
         print(f"Plot for dataset {dataset}")
-        plot_dataset(axs[i // rows, i % cols], data[dataset], args.norm)
+        plot_dataset(
+            axs[i // rows, i % cols],
+            data[dataset],
+            args.norm,
+            args.onlyrep,
+            args.intercept,
+        )
     plt.tight_layout()
     plt.savefig(args.plot_dir / f"rmse_datasets.png")
     plt.savefig(args.plot_dir / f"rmse_datasets.pdf")
+
+    rows = len(dataset)
+    cols = len(annotations)
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * 7, rows * 5))
+    for i, dataset in enumerate(datasets):
+        for j, annotation in enumerate(annotations):
+            print("")
+            print(f"Plot for {dataset}/{annotation}")
+            plot_annotation(
+                axs[i, j],
+                data[dataset][annotation],
+                args.norm,
+                f"{dataset}/{annotation}",
+                args.intercept,
+            )
+    plt.tight_layout()
+    plt.savefig(args.plot_dir / f"rmse_annotations.png")
+    plt.savefig(args.plot_dir / f"rmse_annotations.pdf")
 
     print("")
