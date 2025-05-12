@@ -2,113 +2,283 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from pathlib import Path
-import sys
 from argparse import ArgumentParser
 
 ###################
 # Parse arguments #
 ###################
 
-parser = ArgumentParser()
-parser.add_argument("num_expert", type = int)
-parser.add_argument("results_path", type = Path)
-parser.add_argument("plot_dir", type = Path)
-args = parser.parse_args()
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("plot_dir", type = Path)
+    parser.add_argument("--raw", action = "store_true")
+    return parser.parse_args()
 
 ###############
 # Gather data #
 ###############
 
-print("Gathering data from files")
-coeffs_all = []
-coeffs_exp = []
-coeffs_dsl = []
-coeffs_ppi = []
+def gather(dataset, annotation, num_exp):
 
-files = [args.results_path / Path(f) for f in os.listdir(args.results_path)]
-files = [f for f in files if os.path.isfile(f)]
-for file in files:
-    data = np.load(file)
-    coeffs_all.append(data["coeffs_all"])
-    coeffs_exp.append(data["coeffs_exp"])
-    coeffs_dsl.append(data["coeffs_dsl"])
-    coeffs_ppi.append(data["coeffs_ppi"])
+    print(f" - {dataset}/{annotation}")
 
-coeffs_all = np.stack(coeffs_all, axis=0)
-coeffs_exp = np.stack(coeffs_exp, axis=0)
-coeffs_dsl = np.stack(coeffs_dsl, axis=0)
-coeffs_ppi = np.stack(coeffs_ppi, axis=0)
+    base_path = Path("/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/experiments/vary-num-total")
+    data_path = base_path / dataset / "data" / annotation / f"n{num_exp}"
 
-total_reps = coeffs_all.shape[0]
-print(f"Total files: {total_reps}")
+    if not data_path.exists():
+        raise Exception(f"Error: {data_path} not found")
 
-# Assume X-axis (number of expert samples) is the same for all files
-X = data["num_total_samples"]
+    try:
+        next(data_path.iterdir())
+    except StopIteration:
+        raise Exception(f"Error: {data_path} is empty")
 
-################
-# Compute RMSE #
-################
+    coeffs_all = []
+    coeffs_exp = []
+    coeffs_dsl = []
+    coeffs_ppi = []
 
-# Compute RMSE with all
-def compute_rmse(coeffs_true, coeffs_pred):
-    assert coeffs_true.shape[0] == coeffs_pred.shape[0]
-    rmse = np.sqrt(np.mean((coeffs_true - coeffs_pred) ** 2, axis=(0,2)))
-    sd = np.sqrt(np.mean((coeffs_true - coeffs_pred) ** 2, axis=2)).std(axis=0)
-    num_repetitions = coeffs_true.shape[0]
-    std_err = sd / np.sqrt(num_repetitions)
+    for file in data_path.iterdir():
+        data = np.load(file)
+        coeffs_all.append(data["coeffs_all"])
+        coeffs_exp.append(data["coeffs_exp"])
+        coeffs_dsl.append(data["coeffs_dsl"])
+        coeffs_ppi.append(data["coeffs_ppi"])
+
+    return {
+        "num_total_samples": data["num_total_samples"],
+        "all": np.stack(coeffs_all, axis=0),
+        "exp": np.stack(coeffs_exp, axis=0),
+        "dsl": np.stack(coeffs_dsl, axis=0),
+        "ppi": np.stack(coeffs_ppi, axis=0),
+    }
+
+###########
+# Metrics #
+###########
+
+def compute_rmse(coeffs_true, coeffs_pred, raw):
+
+    assert len(coeffs_true.shape) == 3
+    assert coeffs_true.shape == coeffs_pred.shape
+
+    R = coeffs_true.shape[0]
+
+    if raw:
+        error = coeffs_true - coeffs_pred
+    else:
+        # standardsize per coeff
+        error = (coeffs_true - coeffs_pred) / coeffs_true
+
+    rmse = np.sqrt(np.mean(error ** 2, axis=(0,2)))
+
+    sd = np.sqrt(np.mean(error ** 2, axis=2)).std(axis=0)
+    std_err = sd / np.sqrt(R)
     upper = rmse + 2 * std_err
     lower = rmse - 2 * std_err
-    return rmse, upper, lower
 
-rmse_exp, upper_exp, lower_exp = compute_rmse(coeffs_all, coeffs_exp)
-rmse_dsl, upper_dsl, lower_dsl = compute_rmse(coeffs_all, coeffs_dsl)
-rmse_ppi, upper_ppi, lower_ppi = compute_rmse(coeffs_all, coeffs_ppi)
+    return {
+        "rmse": rmse,
+        "upper": upper,
+        "lower": lower,
+    }
 
 #############
 # Plot RMSE #
 #############
 
-colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+def forward(x, N, n):
+    """
+    Transformation from linspace(0,1) to logspace(log(200),log(N))/N
+    """
+    return N ** (x-1) * n ** (1-x)
 
-print(coeffs_all.shape)
+def inverse(x, N, n):
+    """
+    Transformation from logspace(log(200),log(N))/N to linspace(0,1) to 
+    """
+    return 1 + np.log10(x) / np.log10(N / n)
 
-plt.figure()
-plt.xscale('log')
-plt.title(f"Varying the number of total samples (n = {args.num_expert}, R = {total_reps})")
-plt.xlabel("Number of total samples (N)")
-plt.ylabel("RMSE w.r.t. gold annotations for all samples")
+def plot_rmse(ax, exp, dsl, ppi, n, raw):
 
-plt.fill_between(
-    X,
-    lower_exp,
-    upper_exp,
-    color = colors[0],
-    alpha = 0.2,
-    linewidth = 0,
-)
-plt.plot(X, rmse_exp, "o-", color = colors[0], label = "expert only")
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    X = np.linspace(0, 1, 10)
 
-plt.fill_between(
-    X,
-    lower_dsl,
-    upper_dsl,
-    color = colors[1],
-    alpha = 0.2,
-    linewidth = 0,
-)
-plt.plot(X, rmse_dsl, "o-", color = colors[1], label = "DSL")
+    ax.fill_between(
+        X,
+        exp["lower"],
+        exp["upper"],
+        color = colors[0],
+        alpha = 0.2,
+        linewidth = 0,
+    )
+    ax.plot(
+        X,
+        exp["rmse"],
+        "o-",
+        color = colors[0],
+        label = "expert-only",
+    )
 
-plt.fill_between(
-    X,
-    lower_ppi,
-    upper_ppi,
-    color = colors[2],
-    alpha = 0.2,
-    linewidth = 0,
-)
-plt.plot(X, rmse_ppi, "o-", color = colors[2], label = "PPI")
+    ax.fill_between(
+        X,
+        dsl["lower"],
+        dsl["upper"],
+        color = colors[1],
+        alpha = 0.2,
+        linewidth = 0,
+    )
+    ax.plot(
+        X,
+        dsl["rmse"],
+        "o-",
+        color = colors[1],
+        label = "DSL",
+    )
 
-plt.legend()
+    ax.fill_between(
+        X,
+        ppi["lower"],
+        ppi["upper"],
+        color = colors[2],
+        alpha = 0.2,
+        linewidth = 0,
+    )
+    ax.plot(
+        X,
+        ppi["rmse"],
+        "o-",
+        color = colors[2],
+        label = "PPI",
+    )
 
-plt.savefig(args.plot_dir / Path(f"rmse_n{args.num_expert}.pdf"))
-plt.savefig(args.plot_dir / Path(f"rmse_n{args.num_expert}.png"))
+    if raw:
+        ax.set_ylabel("RMSE")
+    else:
+        ax.set_ylabel("Standardised RMSE")
+
+    xticklabels = [f"{x:.2f}" for x in forward(X, 10000, n)]
+    ax.set_xticks(ticks = X, labels = xticklabels)
+    ax.set_xlabel("Total samples (log)")
+    ax.legend()
+
+
+def plot_all(ax, data, n, raw):
+
+    R = min(data[d][a]["all"].shape[0] for d in datasets for a in annotations)
+    print(f"- minimum number of repetitions: {R}")
+
+    D = len(datasets)
+    A = len(annotations)
+    num_total = np.zeros((D, A, 10))
+    size = (D, A, R, 10, 5)
+    coeffs_all = np.zeros(size)
+    coeffs_exp = np.zeros(size)
+    coeffs_dsl = np.zeros(size)
+    coeffs_ppi = np.zeros(size)
+
+    for i, d in enumerate(datasets):
+        for j, a in enumerate(annotations):
+            N = data[d][a]["all"].shape[0]
+            subsample = np.random.choice(N, R, replace = False)
+            coeffs_all[i,j,:,:,:] = data[d][a]["all"][subsample,:,:]
+            coeffs_exp[i,j,:,:,:] = data[d][a]["exp"][subsample,:,:]
+            coeffs_dsl[i,j,:,:,:] = data[d][a]["dsl"][subsample,:,:]
+            coeffs_ppi[i,j,:,:,:] = data[d][a]["ppi"][subsample,:,:]
+            num_total[i,j,:] = data[d][a]["num_total_samples"]
+
+    transposed = (2, 3, 4, 0, 1)
+    reshaped = (R, 10, 5 * D * A)
+    coeffs_all = coeffs_all.transpose(transposed).reshape(reshaped)
+    coeffs_exp = coeffs_exp.transpose(transposed).reshape(reshaped)
+    coeffs_dsl = coeffs_dsl.transpose(transposed).reshape(reshaped)
+    coeffs_ppi = coeffs_ppi.transpose(transposed).reshape(reshaped)
+
+    print("- computing and plotting the RMSE")
+    rmse_exp = compute_rmse(coeffs_all, coeffs_exp, raw)
+    rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, raw)
+    rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, raw)
+    plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, n, raw)
+
+
+def plot_dataset(ax, data, n, raw):
+
+    R = min(data[a]["all"].shape[0] for a in annotations)
+    print(f"- minimum number of repetitions: {R}")
+
+    A = len(annotations)
+    num_total = np.zeros((A, 10))
+    size = (A, R, 10, 5)
+    coeffs_all = np.zeros(size)
+    coeffs_exp = np.zeros(size)
+    coeffs_dsl = np.zeros(size)
+    coeffs_ppi = np.zeros(size)
+
+    for i, a in enumerate(annotations):
+        N = data[a]["all"].shape[0]
+        subsample = np.random.choice(N, R, replace = False)
+        coeffs_all[i,:,:,:] = data[a]["all"][subsample,:,:]
+        coeffs_exp[i,:,:,:] = data[a]["exp"][subsample,:,:]
+        coeffs_dsl[i,:,:,:] = data[a]["dsl"][subsample,:,:]
+        coeffs_ppi[i,:,:,:] = data[a]["ppi"][subsample,:,:]
+        num_total[i,:] = data[a]["num_total_samples"]
+
+    transposed = (1, 2, 3, 0)
+    reshaped = (R, 10, 5 * A)
+    coeffs_all = coeffs_all.transpose(transposed).reshape(reshaped)
+    coeffs_exp = coeffs_exp.transpose(transposed).reshape(reshaped)
+    coeffs_dsl = coeffs_dsl.transpose(transposed).reshape(reshaped)
+    coeffs_ppi = coeffs_ppi.transpose(transposed).reshape(reshaped)
+
+    print("- computing and plotting the RMSE")
+    ax.set_title(dataset)
+    rmse_exp = compute_rmse(coeffs_all, coeffs_exp, raw)
+    rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, raw)
+    rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, raw)
+    plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, n, raw)
+
+
+if __name__ == "__main__":
+
+    args = parse_args()
+
+    datasets = ["amazon", "misinfo", "biobias"] # , "germeval"]
+    annotations = ["bert", "deepseek", "phi4"]
+    num_exps = [200, 1000, 5000]
+
+    print("")
+    print("Gathering the data")
+    data = {n: {d: {a: gather(d, a, n) for a in annotations} for d in datasets} for n in num_exps}
+
+    args.plot_dir.mkdir(parents=True, exist_ok=True)
+
+    print("")
+    print("Plot for all datasets:")
+    rows = 1
+    cols = 3
+    fig, ax = plt.subplots(rows, cols, figsize=(7 * cols, 5 * rows))
+    for i, n in enumerate(num_exps):
+        ax[i].set_title(f"n = {n}")
+        plot_all(ax[i], data[n], n, args.raw)
+        plt.tight_layout()
+    plt.savefig(args.plot_dir / "rmse_all.png")
+    plt.savefig(args.plot_dir / "rmse_all.pdf")
+
+    for n in num_exps:
+        rows = 2
+        cols = 2
+        fig, axs = plt.subplots(rows, cols, figsize=(cols * 7, rows * 5))
+        for i, dataset in enumerate(datasets):
+            print("")
+            print(f"Plot for dataset {dataset}")
+            plot_dataset(
+                axs[i // rows, i % cols],
+                data[n][dataset],
+                n,
+                args.raw,
+            )
+        plt.tight_layout()
+        plt.savefig(args.plot_dir / f"rmse_datasets_n{n}.png")
+        plt.savefig(args.plot_dir / f"rmse_datasets_n{n}.pdf")
+
+        print("")

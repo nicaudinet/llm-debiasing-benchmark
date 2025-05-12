@@ -1,21 +1,20 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+# from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import pandas as pd
 import matplotlib.pyplot as plt
 
-dataset = "germeval"
-model = "microsoft/phi-4"
+if __name__ == "__main__":
 
-data = pd.read_json(f"/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/annotations/{dataset}/parsed.json")
-# data = data[:10]
-tokenizer = AutoTokenizer.from_pretrained(model)
-data["length"] = data["text"].map(lambda x: len(tokenizer(x)["input_ids"]))
-data["length"].hist(bins=30, grid=False)
-plt.savefig(f"{dataset}_length_hist.pdf")
-data.to_json(f"/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/annotations/{dataset}/tokenized.json")
+    datasets = ["amazon", "misinfo", "biobias", "germeval"]
 
-print(data)
-print("Mean length:", data["length"].mean())
-print("Std length:", data["length"].std())
-print("Max length:", data["length"].max())
-print("Number of reviews over 500 tokens:", len(data[500 < data["length"]]))
-print("Number of reviews over 1000 tokens:", len(data[1000 < data["length"]]))
+    for dataset in datasets:
+        print("")
+        print(f"Dataset: {dataset}")
+
+        print(" - loading the data")
+        data = data = pd.read_json(f"/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/annotations/{dataset}/parsed.json")
+
+        features = data[["x1","x2","x3","x4"]]
+        print(f" - Feature means: {features.mean().to_numpy()}")
+        print(f" - Feature std: {features.std().to_numpy()}")
+
+        print("")
