@@ -14,14 +14,15 @@ def parse_args():
     parser.add_argument(
         "--norm",
         choices = ["raw", "per-coeff", "odds", "logodds", "percent"],
-        default = "logodds",
+        default = "per-coeff",
     )
     parser.add_argument("--onlyrep", action = "store_true")
     parser.add_argument(
         "--intercept",
         choices = ["with", "without", "only"],
-        default = "without",
+        default = "with",
     )
+    parser.add_argument("--num_reps", type = int, default = None)
     return parser.parse_args()
 
 ###############
@@ -284,10 +285,17 @@ def plot_rmse_ratio(ax, dsl, ppi, ratio):
     ax.legend()
     
 
-def plot_all(ax, data, norm, onlyrep, intercept):
+def plot_all(ax, data, norm, onlyrep, intercept, num_reps):
 
-    R = min(data[d][a]["all"].shape[0] for d in datasets for a in annotations)
-    print(f" - minimum number of repetitions: {R}")
+    R_max = min(data[d][a]["all"].shape[0] for d in datasets for a in annotations)
+    if num_reps is not None and R_max < num_reps:
+        print(f" - WARNING: not enough repetitions, using max available")
+        R = R_max
+    elif num_reps is not None:
+        R = num_reps
+    else:
+        R = R_max
+    print(f" - number of repetitions: {R}")
 
     D = len(datasets)
     A = len(annotations)
@@ -366,10 +374,17 @@ def plot_all(ax, data, norm, onlyrep, intercept):
         raise Exception(f"norm {norm} not supported in plot_all")
 
 
-def plot_dataset(ax, data, norm, onlyrep, intercept):
+def plot_dataset(ax, data, norm, onlyrep, intercept, num_reps):
 
-    R = min(data[a]["all"].shape[0] for a in annotations)
-    print(f" - minimum number of repetitions: {R}")
+    R_max = min(data[a]["all"].shape[0] for a in annotations)
+    if num_reps is not None and R_max < num_reps:
+        print(f" - WARNING: not enough repetitions, using max available")
+        R = R_max
+    elif num_reps is not None:
+        R = num_reps
+    else:
+        R = R_max
+    print(f" - number of repetitions: {R}")
 
     A = len(annotations)
     C = 5 # number of coefficients
@@ -510,14 +525,14 @@ if __name__ == "__main__":
     print("")
     print("Plot for all datasets:")
     fig, ax = plt.subplots(figsize=(7,5))
-    plot_all(ax, data, args.norm, args.onlyrep, args.intercept)
+    plot_all(ax, data, args.norm, args.onlyrep, args.intercept, args.num_reps)
     plt.tight_layout()
     plt.savefig(args.plot_dir / "rmse_all.png")
     plt.savefig(args.plot_dir / "rmse_all.pdf")
 
     rows = 2
     cols = 2
-    fig, axs = plt.subplots(rows, cols, figsize=(cols * 7, rows * 5))
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * 5, rows * 3))
     for i, dataset in enumerate(datasets):
         print("")
         print(f"Plot for dataset {dataset}")
@@ -527,6 +542,7 @@ if __name__ == "__main__":
             args.norm,
             args.onlyrep,
             args.intercept,
+            args.num_reps,
         )
     plt.tight_layout()
     plt.savefig(args.plot_dir / f"rmse_datasets.png")
@@ -534,7 +550,7 @@ if __name__ == "__main__":
 
     rows = len(dataset)
     cols = len(annotations)
-    fig, axs = plt.subplots(rows, cols, figsize=(cols * 7, rows * 5))
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * 5, rows * 3))
     for i, dataset in enumerate(datasets):
         for j, annotation in enumerate(annotations):
             print("")
