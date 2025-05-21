@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=12
-#SBATCH --array=1-500
+#SBATCH --array=1-300
 #SBATCH --time=0-00:30:00
 
 #SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/vary-total/output_%A_%a.log
@@ -25,7 +25,7 @@ module purge
 module load rpy2
 module load scikit-learn/1.4.2-gfbf-2023a
 
-source venv/bin/activate
+source /mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/venv/vera/bin/activate
 
 BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
 MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
