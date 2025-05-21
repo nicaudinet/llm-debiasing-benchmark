@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("plot_dir", type = Path)
+    parser.add_argument("--num_reps", type = int, default = None)
     parser.add_argument("--raw", action = "store_true")
     return parser.parse_args()
 
@@ -117,7 +118,7 @@ def plot_rmse(ax, exp, dsl, ppi, n, raw):
         exp["rmse"],
         "o-",
         color = colors[0],
-        label = "expert-only",
+        label = r"$\theta_\dagger$",
     )
 
     ax.fill_between(
@@ -152,21 +153,23 @@ def plot_rmse(ax, exp, dsl, ppi, n, raw):
         label = "PPI",
     )
 
-    if raw:
-        ax.set_ylabel("RMSE")
-    else:
-        ax.set_ylabel("Standardised RMSE")
-
     xticklabels = [f"{x:.2f}" for x in forward(X, 10000, n)]
+    for i in [1,2,4,5,7,8]:
+        xticklabels[i] = ""
     ax.set_xticks(ticks = X, labels = xticklabels)
-    ax.set_xlabel("Total samples (log)")
-    ax.legend()
 
 
-def plot_all(ax, data, n, raw):
+def plot_all(ax, data, n, raw, num_reps):
 
-    R = min(data[d][a]["all"].shape[0] for d in datasets for a in annotations)
-    print(f"- minimum number of repetitions: {R}")
+    R_max = min(data[d][a]["all"].shape[0] for d in datasets for a in annotations)
+    if num_reps is not None and R_max < num_reps:
+        print(" - WARNING: the specified number of reps is too big. Using largest available")
+        R = R_max
+    elif num_reps is not None:
+        R = num_reps
+    else:
+        R = R_max
+    print(f"- number of repetitions: {R}")
 
     D = len(datasets)
     A = len(annotations)
@@ -201,10 +204,17 @@ def plot_all(ax, data, n, raw):
     plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, n, raw)
 
 
-def plot_dataset(ax, data, n, raw):
+def plot_dataset(ax, data, n, raw, num_reps):
 
-    R = min(data[a]["all"].shape[0] for a in annotations)
-    print(f"- minimum number of repetitions: {R}")
+    R_max = min(data[a]["all"].shape[0] for a in annotations)
+    if num_reps is not None and R_max < num_reps:
+        print(" - WARNING: the specified number of reps is too big. Using largest available")
+        R = R_max
+    elif num_reps is not None:
+        R = num_reps
+    else:
+        R = R_max
+    print(f"- number of repetitions: {R}")
 
     A = len(annotations)
     num_total = np.zeros((A, 10))
@@ -242,8 +252,8 @@ if __name__ == "__main__":
 
     args = parse_args()
 
-    datasets = ["amazon", "misinfo", "biobias"] # , "germeval"]
-    annotations = ["bert", "deepseek", "phi4"]
+    datasets = ["amazon", "misinfo", "biobias", "germeval"]
+    annotations = ["bert", "deepseek", "phi4", "claude"]
     num_exps = [200, 1000, 5000]
 
     print("")
@@ -252,22 +262,45 @@ if __name__ == "__main__":
 
     args.plot_dir.mkdir(parents=True, exist_ok=True)
 
+    xlabel = "Proportion of total samples (log)"
+    if args.raw:
+        ylabel = "RMSE"
+    else:
+        ylabel = "sRMSE"
+
+    rowsize = 3
+    colsize = 4
+
     print("")
     print("Plot for all datasets:")
     rows = 1
     cols = 3
-    fig, ax = plt.subplots(rows, cols, figsize=(7 * cols, 5 * rows))
+    fig, ax = plt.subplots(
+        rows,
+        cols,
+        figsize = (cols * colsize, rows * rowsize),
+    )
     for i, n in enumerate(num_exps):
         ax[i].set_title(f"n = {n}")
-        plot_all(ax[i], data[n], n, args.raw)
-        plt.tight_layout()
-    plt.savefig(args.plot_dir / "rmse_all.png")
-    plt.savefig(args.plot_dir / "rmse_all.pdf")
+        plot_all(ax[i], data[n], n, args.raw, args.num_reps)
+    handles, labels = ax[0].get_legend_handles_labels()
+    fig.legend(
+        handles,
+        labels,
+        loc = "upper center",
+        bbox_to_anchor = (0.5, 1),
+        ncol = 3,
+    )
+    fig.supxlabel(xlabel)
+    fig.supylabel(ylabel)
+    fig.tight_layout(rect = [0.02, 0, 1, 0.93])
+    fig.savefig(args.plot_dir / "rmse_all.png")
+    fig.savefig(args.plot_dir / "rmse_all.pdf")
 
     for n in num_exps:
         rows = 2
         cols = 2
-        fig, axs = plt.subplots(rows, cols, figsize=(cols * 7, rows * 5))
+        fig, axs = plt.subplots(rows, cols, figsize=(cols * colsize, rows * rowsize))
         for i, dataset in enumerate(datasets):
             print("")
             print(f"Plot for dataset {dataset}")
@@ -276,9 +309,12 @@ if __name__ == "__main__":
                 data[n][dataset],
                 n,
                 args.raw,
+                args.num_reps,
             )
-        plt.tight_layout()
-        plt.savefig(args.plot_dir / f"rmse_datasets_n{n}.png")
-        plt.savefig(args.plot_dir / f"rmse_datasets_n{n}.pdf")
+        fig.supxlabel(xlabel)
+        fig.supylabel(ylabel)
+        fig.tight_layout()
+        fig.savefig(args.plot_dir / f"rmse_datasets_n{n}.png")
+        fig.savefig(args.plot_dir / f"rmse_datasets_n{n}.pdf")
 
         print("")

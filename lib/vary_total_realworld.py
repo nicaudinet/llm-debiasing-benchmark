@@ -6,7 +6,7 @@ import os
 import pandas as pd
 from argparse import ArgumentParser
 
-from fitting import fit, fit_dsl, fit_ppi
+from fitting import logit_fit, logit_fit_dsl, logit_fit_ppi
 
 @dataclass
 class SampleParams:
@@ -19,7 +19,7 @@ def compute_coeffs(params: SampleParams):
     X = params.data[["x1", "x2", "x3", "x4"]].to_numpy()
     Y = params.data["y"].to_numpy().astype(float)
     Y_hat = params.data["y_hat"].to_numpy()
-    coeffs_all = fit(X, Y)
+    coeffs_all = logit_fit(X, Y)
 
     samples = np.random.choice(len(params.data), size=params.N, replace=False)
     selected = np.random.choice(params.N, size=params.n, replace=False)
@@ -27,9 +27,9 @@ def compute_coeffs(params: SampleParams):
     Y = Y[samples]
     Y_hat = Y_hat[samples]
 
-    coeffs_exp = fit(X[selected], Y[selected])
-    coeffs_dsl = fit_dsl(X, Y, Y_hat, selected)
-    coeffs_ppi = fit_ppi(X, Y, Y_hat, selected)
+    coeffs_exp = logit_fit(X[selected], Y[selected])
+    coeffs_dsl = logit_fit_dsl(X, Y, Y_hat, selected)
+    coeffs_ppi = logit_fit_ppi(X, Y, Y_hat, selected)
 
     return coeffs_all, coeffs_exp, coeffs_dsl, coeffs_ppi
 

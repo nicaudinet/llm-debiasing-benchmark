@@ -166,7 +166,7 @@ def inverse(x, N):
     """
     return 1 + np.log10(x) / np.log10(N / 200)
 
-def plot_rmse(ax, exp, dsl, ppi, standardise):
+def plot_rmse(ax, exp, dsl, ppi):
 
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
     X = np.linspace(0, 1, 10)
@@ -184,7 +184,7 @@ def plot_rmse(ax, exp, dsl, ppi, standardise):
         exp["rmse"],
         "o-",
         color = colors[0],
-        label = "expert-only",
+        label = r"$\theta_\dagger$",
     )
 
     ax.fill_between(
@@ -219,14 +219,10 @@ def plot_rmse(ax, exp, dsl, ppi, standardise):
         label = "PPI",
     )
 
-    if standardise:
-        ax.set_ylabel("Standardised RMSE")
-    else:
-        ax.set_ylabel("RMSE")
-
     xticklabels = [f"{x:.2f}" for x in forward(X, 10000)]
+    for i in [1,2,4,5,7,8]:
+        xticklabels[i] = ""
     ax.set_xticks(ticks = X, labels = xticklabels)
-    ax.set_xlabel("Proportion of expert samples (log)")
     ax.legend()
 
 def plot_rmse_ratio(ax, dsl, ppi, ratio):
@@ -353,13 +349,13 @@ def plot_all(ax, data, norm, onlyrep, intercept, num_reps):
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, False)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, False)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, False)
-        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, False)
+        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi)
     elif norm == "per-coeff":
         print(" - using per-coefficient normalisation")
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, True)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, True)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, True)
-        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, True)
+        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi)
     elif norm == "odds" or norm == "logodds" or norm == "percent":
         print(f" - using ratio ({norm}) normalisation")
         rmse_dsl, rmse_ppi = compute_rmse_ratio(
@@ -434,19 +430,18 @@ def plot_dataset(ax, data, norm, onlyrep, intercept, num_reps):
         coeffs_ppi = coeffs_ppi.reshape(reshaped)
 
     print(" - computing and plotting the RMSE")
-    ax.set_title(dataset)
     if norm == "raw":
         print(" - using no normalisation")
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, False)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, False)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, False)
-        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, False)
+        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi)
     elif norm == "per-coeff":
         print(" - using per-coefficient normalisation")
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, True)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, True)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, True)
-        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, True)
+        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi)
     elif norm == "odds" or  norm == "logodds" or norm == "percent":
         print(f" - using ratio ({norm}) normalisation")
         rmse_dsl, rmse_ppi = compute_rmse_ratio(
@@ -490,13 +485,13 @@ def plot_annotation(ax, data, norm, title, intercept):
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, False)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, False)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, False)
-        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, False)
+        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi)
     elif norm == "per-coeff":
         print(" - using per-coefficient normalisation")
         rmse_exp = compute_rmse(coeffs_all, coeffs_exp, True)
         rmse_dsl = compute_rmse(coeffs_all, coeffs_dsl, True)
         rmse_ppi = compute_rmse(coeffs_all, coeffs_ppi, True)
-        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi, True)
+        plot_rmse(ax, rmse_exp, rmse_dsl, rmse_ppi)
     elif norm == "odds" or  norm == "logodds" or norm == "percent":
         print(f" - using ratio ({norm}) normalisation")
         rmse_dsl, rmse_ppi = compute_rmse_ratio(
@@ -516,7 +511,17 @@ if __name__ == "__main__":
     args = parse_args()
 
     datasets = ["amazon", "misinfo", "biobias", "germeval"]
-    annotations = ["bert", "deepseek", "phi4"]
+    annotations = ["bert", "deepseek", "phi4", "claude"]
+
+    rowsize = 3
+    colsize = 5
+
+    xlabel = "Proportion of expert samples (log)"
+    if args.norm == "per-coeff":
+        ylabel = "sRMSE"
+    else:
+        print(" - WARNING: not using per-coeff")
+        ylabel = "RMSE"
 
     print("")
     print("Gathering the data")
@@ -524,33 +529,45 @@ if __name__ == "__main__":
 
     print("")
     print("Plot for all datasets:")
-    fig, ax = plt.subplots(figsize=(7,5))
+    fig, ax = plt.subplots(figsize=(colsize, rowsize))
     plot_all(ax, data, args.norm, args.onlyrep, args.intercept, args.num_reps)
-    plt.tight_layout()
-    plt.savefig(args.plot_dir / "rmse_all.png")
-    plt.savefig(args.plot_dir / "rmse_all.pdf")
+    fig.supxlabel(xlabel)
+    fig.supylabel(ylabel)
+    fig.tight_layout()
+    fig.savefig(args.plot_dir / "rmse_all.png")
+    fig.savefig(args.plot_dir / "rmse_all.pdf")
 
     rows = 2
     cols = 2
-    fig, axs = plt.subplots(rows, cols, figsize=(cols * 5, rows * 3))
+    titles = {
+        "amazon": "Multi-domain Sentiment",
+        "misinfo": "Misinfo-general",
+        "biobias": "Bias in Biographies",
+        "germeval": "Germeval18",
+    }
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * colsize, rows * rowsize))
     for i, dataset in enumerate(datasets):
         print("")
         print(f"Plot for dataset {dataset}")
+        ax = axs[i // rows, i % cols]
+        ax.set_title(titles[dataset])
         plot_dataset(
-            axs[i // rows, i % cols],
+            ax,
             data[dataset],
             args.norm,
             args.onlyrep,
             args.intercept,
             args.num_reps,
         )
-    plt.tight_layout()
-    plt.savefig(args.plot_dir / f"rmse_datasets.png")
-    plt.savefig(args.plot_dir / f"rmse_datasets.pdf")
+    fig.supxlabel(xlabel)
+    fig.supylabel(ylabel)
+    fig.tight_layout()
+    fig.savefig(args.plot_dir / f"rmse_datasets.png")
+    fig.savefig(args.plot_dir / f"rmse_datasets.pdf")
 
     rows = len(dataset)
     cols = len(annotations)
-    fig, axs = plt.subplots(rows, cols, figsize=(cols * 5, rows * 3))
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * colsize, rows * rowsize))
     for i, dataset in enumerate(datasets):
         for j, annotation in enumerate(annotations):
             print("")
@@ -562,8 +579,10 @@ if __name__ == "__main__":
                 f"{dataset}/{annotation}",
                 args.intercept,
             )
-    plt.tight_layout()
-    plt.savefig(args.plot_dir / f"rmse_annotations.png")
-    plt.savefig(args.plot_dir / f"rmse_annotations.pdf")
+    fig.supxlabel(xlabel)
+    fig.supylabel(ylabel)
+    fig.tight_layout()
+    fig.savefig(args.plot_dir / f"rmse_annotations.png")
+    fig.savefig(args.plot_dir / f"rmse_annotations.pdf")
 
     print("")
