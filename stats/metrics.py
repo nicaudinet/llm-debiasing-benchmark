@@ -7,7 +7,7 @@ from pathlib import Path
 if __name__ == "__main__":
 
     datasets = ["amazon", "misinfo", "biobias", "germeval"]
-    annotations = ["bert", "deepseek", "phi4"]
+    annotations = ["bert", "deepseek", "phi4", "claude"]
 
     annotation_dir = Path("/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/annotations")
 
@@ -21,8 +21,8 @@ if __name__ == "__main__":
         logreg = LogisticRegression()
         logreg.fit(train[features], train["y"])
         preds = logreg.predict(test[features])
-        print(f"     - accuracy: {accuracy_score(preds, test["y"])}")
-        print(f"     - f1 score: {f1_score(preds, test["y"])}")
+        print(f"     - accuracy: {accuracy_score(preds, test['y'])}")
+        print(f"     - f1 score: {f1_score(preds, test['y'])}")
 
     print("")
     print("Agreement scores between predicted and gold-standard labels")
