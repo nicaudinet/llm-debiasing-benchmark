@@ -20,3 +20,4 @@ hists
 .venv_plot
 plots
 diagrams
+lib/dsl_use.egg-info
