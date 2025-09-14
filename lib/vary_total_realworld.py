@@ -11,12 +11,13 @@ from fitting import logit_fit, logit_fit_dsl, logit_fit_ppi
 @dataclass
 class SampleParams:
     data: pd.DataFrame # (x1, x2, x3, y, y_hat)
+    features: set[str]
     N: int
     n: int
 
 def compute_coeffs(params: SampleParams):
 
-    X = params.data[["x1", "x2", "x3", "x4"]].to_numpy()
+    X = params.data[list(params.features)].to_numpy()
     Y = params.data["y"].to_numpy().astype(float)
     Y_hat = params.data["y_hat"].to_numpy()
     coeffs_all = logit_fit(X, Y)
@@ -35,13 +36,14 @@ def compute_coeffs(params: SampleParams):
 
 def simulate(
         data: pd.DataFrame,
+        features: set[str],
         num_expert_samples: int,
         num_data_points: int,
         max_total_samples: int,
-        num_coefficients: int,
         num_cores: int,
     ):
 
+    num_coefficients = len(features) + 1 # features + intercept
     size = (num_data_points, num_coefficients)
     results = {
         "coeffs_all": np.zeros(size),
@@ -63,6 +65,7 @@ def simulate(
     for N in np.round(num_total_samples).astype(int):
         params.append(SampleParams(
             data = data,
+            features = features,
             N = N,
             n = num_expert_samples,
         ))
@@ -85,12 +88,13 @@ if __name__ == "__main__":
     parser.add_argument("annotated_path", type = Path)
     parser.add_argument("results_path", type = Path)
     parser.add_argument("--seed", type = int)
+    parser.add_argument("--collinear-threshold", type = float)
     args = parser.parse_args()
 
     if "SLURM_CPUS_ON_NODE" in os.environ:
         num_cores = int(os.environ["SLURM_CPUS_ON_NODE"])
     else:
-        num_cores = 10
+        num_cores = 11
     print(f"Using {num_cores} cores")
 
     if args.seed is not None:
@@ -102,13 +106,26 @@ if __name__ == "__main__":
     print("Reading the data")
     data = pd.read_json(args.annotated_path)
 
+    # Features assumed to be in the data table
+    features = set(["x1", "x2", "x3", "x4"])
+
+    if args.collinear_threshold:
+        print("Removing collinear features above threhsold")
+        to_remove = set()
+        for x, y in itertools.combinations(features, 2):
+            r = data[x].corr(data[y], method = "pearson")
+            if args.collinear_threshold < r**2:
+                to_remove.add(y)
+        data = data.drop(columns=list(to_remove))
+        features = features - to_remove
+
     print("Running the experiment")
     results = simulate(
         data = data,
+        features = features,
         num_expert_samples = args.num_expert,
         num_data_points = 10,
         max_total_samples = 10000,
-        num_coefficients = 5, # 4 Xs + intercept
         num_cores = num_cores,
     )
 
