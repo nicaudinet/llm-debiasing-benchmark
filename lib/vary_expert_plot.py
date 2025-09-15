@@ -178,8 +178,8 @@ def plot_all(ax, data, num_reps):
     coeffs_dsl = []
     coeffs_ppi = []
 
-    for i, d in enumerate(datasets):
-        for j, a in enumerate(annotations):
+    for d in datasets:
+        for a in annotations:
             N = data[d][a]["all"].shape[0]
             subsample = np.random.choice(N, R, replace = False)
             coeffs_all.append(data[d][a]["all"][subsample,:,:])
@@ -268,11 +268,11 @@ if __name__ == "__main__":
     datasets = ["amazon", "misinfo", "biobias", "germeval"]
     annotations = ["bert", "deepseek", "phi4", "claude"]
 
-    rowsize = 3
-    colsize = 5
-
     xlabel = "Proportion of expert samples (log)"
     ylabel = "sRMSE"
+
+    rowsize = 3
+    colsize = 5
 
     ###############
     # Gather data #
