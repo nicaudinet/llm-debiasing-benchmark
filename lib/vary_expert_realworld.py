@@ -5,6 +5,10 @@ from concurrent.futures import ProcessPoolExecutor
 import os
 import pandas as pd
 from argparse import ArgumentParser
+import itertools
+
+import multiprocessing as mp
+mp.set_start_method("spawn", force=True)
 
 import fitting as fit
 
@@ -12,13 +16,14 @@ import fitting as fit
 class SampleParams:
     data: pd.DataFrame
     model: str
+    features: set[str]
     n: int
 
 def compute_coeffs(params: SampleParams):
 
     selected = np.random.choice(len(params.data), size=params.n, replace=False)
 
-    X = params.data[["x1", "x2", "x3", "x4"]].to_numpy()
+    X = params.data[list(params.features)].to_numpy()
     Y = params.data["y"].to_numpy().astype(float)
     Y_hat = params.data["y_hat"].to_numpy()
 
@@ -38,14 +43,15 @@ def compute_coeffs(params: SampleParams):
     return coeffs_all, coeffs_exp, coeffs_dsl, coeffs_ppi
 
 def simulate(
-        data: pd.DataFrame, # expected columns: (x1, x2, x3, y, y_hat)
+        data: pd.DataFrame,
         model: str,
+        features: set[str],
         num_data_points: int,
         min_expert_samples: int,
-        num_coefficients: int,
         num_cores: int,
     ):
 
+    num_coefficients = len(features) + 1 # features + intercept
     size = (num_data_points, num_coefficients)
     results = {
         "coeffs_all": np.zeros(size),
@@ -67,6 +73,7 @@ def simulate(
         params.append(SampleParams(
             data = data,
             model = model,
+            features = features,
             n = n,
         ))
 
@@ -88,6 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("annotated_path", type = Path)
     parser.add_argument("results_path", type = Path)
     parser.add_argument("--seed", type = int)
+    parser.add_argument("--collinear-threshold", type = float)
     parser.add_argument("--centered", action = "store_true")
     args = parser.parse_args()
 
@@ -106,20 +114,32 @@ if __name__ == "__main__":
     print("Reading the data")
     data = pd.read_json(args.annotated_path)
 
+    # Features assumed to be in the data table
+    features = set(["x1", "x2", "x3", "x4"])
+
+    if args.collinear_threshold:
+        print("Removing collinear features above threhsold")
+        to_remove = set()
+        for x, y in itertools.combinations(features, 2):
+            r = data[x].corr(data[y], method = "pearson")
+            if args.collinear_threshold < r**2:
+                to_remove.add(y)
+        data = data.drop(columns=list(to_remove))
+        features = features - to_remove
+
     if args.centered:
         print("Centering the data")
-        data["x1"] = data["x1"] - data["x1"].mean()
-        data["x2"] = data["x2"] - data["x2"].mean()
-        data["x3"] = data["x3"] - data["x3"].mean()
-        data["x4"] = data["x4"] - data["x4"].mean()
+        for feature in features:
+            data[feature] = data[feature] - data[feature].mean()
+
 
     print("Running the experiment")
     results = simulate(
         data = data,
         model = args.model,
+        features = features,
         num_data_points = 10,
         min_expert_samples = 200,
-        num_coefficients = 5, # 4 Xs + intercept
         num_cores = num_cores,
     )
 

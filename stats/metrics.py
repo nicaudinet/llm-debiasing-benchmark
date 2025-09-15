@@ -3,11 +3,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
 from pathlib import Path
+from itertools import combinations
 
 if __name__ == "__main__":
 
     datasets = ["amazon", "misinfo", "biobias", "germeval"]
-    annotations = ["bert", "deepseek", "phi4"]
+    annotations = ["bert", "deepseek", "phi4", "claude"]
 
     annotation_dir = Path("/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/annotations")
 
@@ -21,8 +22,8 @@ if __name__ == "__main__":
         logreg = LogisticRegression()
         logreg.fit(train[features], train["y"])
         preds = logreg.predict(test[features])
-        print(f"     - accuracy: {accuracy_score(preds, test["y"])}")
-        print(f"     - f1 score: {f1_score(preds, test["y"])}")
+        print(f"     - accuracy: {accuracy_score(preds, test['y'])}")
+        print(f"     - f1 score: {f1_score(preds, test['y'])}")
 
     print("")
     print("Agreement scores between predicted and gold-standard labels")
@@ -33,5 +34,16 @@ if __name__ == "__main__":
             data = data = pd.read_json(data_path)
             agreement = accuracy_score(data["y"], data["y_hat"])
             print(f"     - {annotation} accuracy: {agreement}")
+
+    print("")
+    print("Pearson r^2 correlation between features")
+    for dataset in datasets:
+        print(f" - {dataset}")
+        data = data = pd.read_json(annotation_dir / dataset / "parsed.json")
+        for x, y in combinations(["x1","x2","x3","x4"], 2):
+            if x == y:
+                continue
+            correlation = data[x].corr(data[y], method="pearson")
+            print(f"     - {x} {y} : {correlation**2:.03f}")
 
     print("")

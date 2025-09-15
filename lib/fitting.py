@@ -3,7 +3,6 @@ from ppi_py import ppi_logistic_pointestimate, ppi_ols_pointestimate
 from sklearn.linear_model import LogisticRegression, LinearRegression
 import numpy as np
 import pandas as pd
-import rpy2.robjects as ro
 import tempfile
 
 ##########
@@ -105,8 +104,7 @@ def logit_fit(X, Y):
         max_iter = 1000,
     )
     logreg.fit(X, Y)
-    coeffs = np.insert(logreg.coef_, 0, logreg.intercept_)
-    return coeffs
+    return np.insert(logreg.coef_, 0, logreg.intercept_)
 
 def logit_fit_ppi(X, Y_true, Y_pred, selected):
 
@@ -128,6 +126,8 @@ def logit_fit_dsl(X, Y_true, Y_pred, selected):
     using the DSL from the R package
     """
 
+    import rpy2.robjects as ro
+
     # Set Y_true to None for non-selected samples
     not_selected = set(range(Y_true.shape[0])) - set(selected)
     not_selected = list(not_selected)
@@ -135,23 +135,18 @@ def logit_fit_dsl(X, Y_true, Y_pred, selected):
     Y_true_sel[not_selected] = None # selected expert annotations
 
     # Put the data into a dataframe
-    data = pd.DataFrame({
-        "c0": X[:,0],
-        "c1": X[:,1],
-        "c2": X[:,2],
-        "c3": X[:,3],
-        "Y": Y_true_sel,
-        "Y_hat": Y_pred,
-    })
+    num_features = X.shape[1]
+    features = [f"c{i}" for i in range(num_features)]
+    data = {feature: X[:,i] for i, feature in enumerate(features)}
+    data["Y"] = Y_true_sel
+    data["Y_hat"] = Y_pred
+    data = pd.DataFrame(data)
 
-    # Create a temporary directory
     with tempfile.TemporaryDirectory() as tmp:
 
-        # Create temporary files
         data_file = Path(tmp) / "data.csv"
         coeff_file = Path(tmp) / "coeff.csv"
 
-        # Write data to file
         data.to_csv(data_file, index=False)
 
         # R script that reads the data file, runs the DSL algorithm and
@@ -162,7 +157,7 @@ def logit_fit_dsl(X, Y_true, Y_pred, selected):
             data <- read.csv("{data_file}")
             out <- dsl(
                 model = "logit",
-                formula = Y ~ c0 + c1 + c2 + c3,
+                formula = Y ~ {" + ".join(features)},
                 predicted_var = "Y",
                 prediction = "Y_hat",
                 data = data,

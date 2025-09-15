@@ -9,7 +9,7 @@ dataset_labels = {
     "amazon": ["NEGATIVE", "POSITIVE"],
     "misinfo": ["THESUN", "THEGUARDIAN"],
     "biobias": ["MALE", "FEMALE"],
-    "germeval": ["OFFENSIVE", "OTHER"],
+    "germeval": ["OTHER", "OFFENSIVE"],
 }
 
 
