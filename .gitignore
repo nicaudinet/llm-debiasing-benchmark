@@ -20,3 +20,6 @@ hists
 .venv_plot
 plots
 diagrams
+datasets/experiments
+paper
+.DS_Store
