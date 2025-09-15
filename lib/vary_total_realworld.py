@@ -5,6 +5,10 @@ from concurrent.futures import ProcessPoolExecutor
 import os
 import pandas as pd
 from argparse import ArgumentParser
+import itertools
+
+import multiprocessing as mp
+mp.set_start_method("spawn", force=True)
 
 from fitting import logit_fit, logit_fit_dsl, logit_fit_ppi
 
