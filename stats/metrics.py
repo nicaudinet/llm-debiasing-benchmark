@@ -37,13 +37,22 @@ if __name__ == "__main__":
 
     print("")
     print("Pearson r^2 correlation between features")
+    feature_pairs = list(combinations(["x1","x2","x3","x4"], 2))
+    to_name = lambda x, y: f"({x},{y})"
+    correlations = {to_name(x,y): [] for x, y in feature_pairs}
+    correlations["name"] = []
     for dataset in datasets:
-        print(f" - {dataset}")
-        data = data = pd.read_json(annotation_dir / dataset / "parsed.json")
-        for x, y in combinations(["x1","x2","x3","x4"], 2):
-            if x == y:
-                continue
-            correlation = data[x].corr(data[y], method="pearson")
-            print(f"     - {x} {y} : {correlation**2:.03f}")
+        for annotation in annotations:
+            correlations["name"].append(f"{dataset}/{annotation}")
+            filepath = annotation_dir / dataset / f"annotated_{annotation}.json"
+            data = data = pd.read_json(filepath)
+            for x, y in feature_pairs:
+                if x == y:
+                    continue
+                correlation = data[x].corr(data[y], method="pearson")
+                correlations[to_name(x, y)].append(correlation**2)
+    correlations = pd.DataFrame(correlations)
+    print(correlations)
+    correlations.to_csv("correlations.csv")
 
     print("")
