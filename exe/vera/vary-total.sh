@@ -8,10 +8,10 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=12
 #SBATCH --array=1-300
-#SBATCH --time=0-00:30:00
+#SBATCH --time=0-00:20:00
 
-#SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/no-collinear/total/output_%A_%a.log
-#SBATCH --error=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/no-collinear/total/error_%A_%a.log
+#SBATCH --output=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/no-collinear-90/vary-total/output_%A_%a.log
+#SBATCH --error=/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/logs/no-collinear-90/vary-total/error_%A_%a.log
 
 #SBATCH --mail-user=nicolas.audinet@chalmers.se
 #SBATCH --mail-type=all
@@ -29,7 +29,7 @@ source /mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/venv/vera/bin/activate
 
 BASE_DIR="/cephyr/users/audinet/Vera/dsl-use/"
 MIMER_PATH="/mimer/NOBACKUP/groups/ci-nlp-alvis/dsl-use/"
-DATA_DIR="$MIMER_PATH/experiments/no-collinear/vary-num-total/data/$DATASET/$ANNOTATION"
+DATA_DIR="$MIMER_PATH/experiments/no-collinear-90/vary-num-total/data/$DATASET/$ANNOTATION"
 
 mkdir -p $DATA_DIR
 
@@ -41,6 +41,6 @@ for n in "${num_expert[@]}"; do
         "$n" \
 	    "$MIMER_PATH/annotations/$DATASET/annotated_$ANNOTATION.json" \
         "$DATA_DIR_N/data_${SLURM_ARRAY_TASK_ID}.npz" \
-        --collinear-threshold 0.95 \
+        --collinear-threshold 0.90 \
         --seed "${SLURM_ARRAY_TASK_ID}"
 done

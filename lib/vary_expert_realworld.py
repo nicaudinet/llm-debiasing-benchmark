@@ -122,8 +122,10 @@ if __name__ == "__main__":
         to_remove = set()
         for x, y in itertools.combinations(features, 2):
             r = data[x].corr(data[y], method = "pearson")
+            print(" -", x, y, r**2)
             if args.collinear_threshold < r**2:
                 to_remove.add(y)
+        print("REMOVED:", list(to_remove))
         data = data.drop(columns=list(to_remove))
         features = features - to_remove
 
